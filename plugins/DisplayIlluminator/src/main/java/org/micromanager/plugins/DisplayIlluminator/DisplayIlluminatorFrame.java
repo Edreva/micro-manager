@@ -21,8 +21,8 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
 import com.google.common.eventbus.Subscribe;
-import java.awt.Font;
-import java.awt.Toolkit;
+
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
@@ -32,12 +32,12 @@ import javax.swing.event.ChangeListener;
 
 import mmcorej.CMMCore;
 import net.miginfocom.swing.MigLayout;
-import org.micromanager.PropertyManager;
 import org.micromanager.Studio;
 import org.micromanager.data.Image;
-import org.micromanager.events.ExposureChangedEvent;
 import org.micromanager.events.PropertyChangedEvent;
 import org.micromanager.internal.utils.WindowPositioning;
+
+import org.micromanager.plugins.DisplayIlluminator.ColorChooserButton.ColorChangedListener;
 
 // Imports for MMStudio internal packages
 // Plugins should not access internal packages, to ensure modularity and
@@ -62,13 +62,38 @@ public class DisplayIlluminatorFrame extends JFrame {
         JTabbedPane mainTabbedPane = new JTabbedPane();
         JPanel illumPatternPane = new JPanel();
         mainTabbedPane.add("Display Illuminator Settings", illumPatternPane);
-        illumPatternPane.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2"));
-        super.add(mainTabbedPane, "growx, wrap");
+        illumPatternPane.setLayout(new MigLayout("wrap 2, fill, insets 2, gap 2"));
+        super.add(mainTabbedPane, "grow, wrap");
+
+        JPanel previewPanel = new JPanel();
+        JPanel controlPanel = new JPanel();
+        previewPanel.setLayout(new MigLayout("wrap 2, fill, insets 2, gap 2"));
+        controlPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2"));
+        illumPatternPane.add(controlPanel, "grow");
+        illumPatternPane.add(previewPanel, "grow");
 
 
+        JTabbedPane tabbedPreviewPane = new JTabbedPane();
+
+        JSlider xPosSlider = new JSlider(JSlider.HORIZONTAL);
+        JPanel dpc1Panel = new ResizableImagePanel(HalfCircleGraphic.createBufferedImage(Color.green, 1080, 1920, 1080));
+//        JLabel testLabel = new JLabel(HalfCircleGraphic.createIcon(Color.green, 108,192,108));
+//        dpc1Panel.add(testLabel);
+//        dpc1Panel.repaint();
+        JPanel dpc2Panel = new JPanel();
+        JPanel dpc3Panel = new JPanel();
+        JPanel dpc4Panel = new JPanel();
+        tabbedPreviewPane.add("DPC1", dpc1Panel);
+        tabbedPreviewPane.add("DPC2", dpc2Panel);
+        tabbedPreviewPane.add("DPC3", dpc3Panel);
+        tabbedPreviewPane.add("DPC4", dpc4Panel);
+        previewPanel.add(tabbedPreviewPane, "grow");
+
+
+        Font labelFont = new Font("Arial", Font.BOLD, 14);
         JLabel diameterLabel = new JLabel("DPC Diameter (Pixels):");
-        diameterLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        illumPatternPane.add(diameterLabel);
+        diameterLabel.setFont(labelFont);
+        controlPanel.add(diameterLabel);
 
         dpcDiameterField_ = new JTextField(10); // TODO: Sanitise input: https://stackoverflow.com/questions/11093326/restricting-jtextfield-input-to-integers
         try {
@@ -87,11 +112,11 @@ public class DisplayIlluminatorFrame extends JFrame {
                 }
             }
         });
-        illumPatternPane.add(dpcDiameterField_, "span 2, growx");
+        controlPanel.add(dpcDiameterField_, "span 2, growx");
 
         JLabel rotationLabel = new JLabel("Rotation (degrees):");
-        rotationLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        illumPatternPane.add(rotationLabel);
+        rotationLabel.setFont(labelFont);
+        controlPanel.add(rotationLabel);
         JTextField rotationField = new JTextField(3);
         rotationField.setText("0");
         JSlider rotationSlider = new JSlider(JSlider.HORIZONTAL, 0, 360, 0);
@@ -110,8 +135,36 @@ public class DisplayIlluminatorFrame extends JFrame {
                 }
             }
         });
-        illumPatternPane.add(rotationSlider);
-        illumPatternPane.add(rotationField);
+        controlPanel.add(rotationSlider, "growx");
+        controlPanel.add(rotationField, "growx");
+
+        String initialColor;
+        try {
+            initialColor = core_.getProperty("DisplayIlluminator", "MonoColor");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        JLabel colorLabel = new JLabel("Colour:");
+        colorLabel.setFont(labelFont);
+        ColorChooserButton colorChooser = new ColorChooserButton(Color.decode("#"+initialColor));
+        JTextField colorField = new JTextField(6);
+        colorField.setText(initialColor);
+        colorChooser.addColorChangedListener(new ColorChangedListener() {
+            @Override
+            public void colorChanged(Color newColor) {
+                String colorHex = colorToHexString(newColor);
+                colorField.setText(colorHex);
+                try {
+                    core_.setProperty("DisplayIlluminator", "MonoColor", colorHex);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
+
+        controlPanel.add(colorLabel);
+        controlPanel.add(colorChooser, "growx");
+        controlPanel.add(colorField, "growx");
 
         // Snap an image, show the image in the Snap/Live view
         JButton snapButton = new JButton("Snap Image");
@@ -174,5 +227,9 @@ public class DisplayIlluminatorFrame extends JFrame {
                     dpcDiameterField_.setText(event.getValue());
             }
         }
+    }
+
+    public String colorToHexString(java.awt.Color color) {
+        return String.format("%06x", color.getRGB() & 0xFFFFFF);
     }
 }
