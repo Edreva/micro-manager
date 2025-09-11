@@ -25,6 +25,7 @@ import com.google.common.eventbus.Subscribe;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -52,11 +53,15 @@ public class DisplayIlluminatorFrame extends JFrame {
     private CMMCore core_;
     private JTextField userText_;
     private JTextField dpcDiameterField_;
+    private Map< String, OvalSegmentImage > previewImages_ = new HashMap<String, OvalSegmentImage>();
+    private DisplayIlluminatorInterface displayIlluminator;
 
     public DisplayIlluminatorFrame(Studio studio) {
         super("DisplayIlluminator Plugin GUI");
         studio_ = studio;
         core_ = studio.getCMMCore();
+
+        displayIlluminator = new DisplayIlluminatorInterface(studio_, "DisplayIlluminator");
 
         super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
         JTabbedPane mainTabbedPane = new JTabbedPane();
@@ -66,8 +71,9 @@ public class DisplayIlluminatorFrame extends JFrame {
         super.add(mainTabbedPane, "grow, wrap");
 
         JPanel previewPanel = new JPanel();
+        previewPanel.setBorder(BorderFactory.createTitledBorder("Preview Panel"));
         JPanel controlPanel = new JPanel();
-        previewPanel.setLayout(new MigLayout("wrap 2, fill, insets 2, gap 2"));
+        previewPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2"));
         controlPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2"));
         illumPatternPane.add(controlPanel, "grow");
         illumPatternPane.add(previewPanel, "grow");
@@ -75,19 +81,87 @@ public class DisplayIlluminatorFrame extends JFrame {
 
         JTabbedPane tabbedPreviewPane = new JTabbedPane();
 
-        JSlider xPosSlider = new JSlider(JSlider.HORIZONTAL);
-        JPanel dpc1Panel = new ResizableImagePanel(HalfCircleGraphic.createBufferedImage(Color.green, 1080, 1920, 1080));
-//        JLabel testLabel = new JLabel(HalfCircleGraphic.createIcon(Color.green, 108,192,108));
-//        dpc1Panel.add(testLabel);
-//        dpc1Panel.repaint();
-        JPanel dpc2Panel = new JPanel();
-        JPanel dpc3Panel = new JPanel();
-        JPanel dpc4Panel = new JPanel();
-        tabbedPreviewPane.add("DPC1", dpc1Panel);
-        tabbedPreviewPane.add("DPC2", dpc2Panel);
-        tabbedPreviewPane.add("DPC3", dpc3Panel);
-        tabbedPreviewPane.add("DPC4", dpc4Panel);
+        JPanel xPosControls = new JPanel(new MigLayout("wrap 1, fill"));
+        JPanel yPosControls = new JPanel(new MigLayout("wrap 2, fill"));
+        JSlider xPosSlider = new JSlider(JSlider.HORIZONTAL,-displayIlluminator.getDisplayWidthPx()/2,displayIlluminator.getDisplayWidthPx()/2,0);
+        xPosSlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                int sliderInt = xPosSlider.getValue();
+                previewImages_.forEach((k, v) -> v.setXPos(sliderInt));
+                previewPanel.repaint();
+                if (xPosSlider.getValueIsAdjusting()) {
+                    return;
+                }
+                try {
+                    displayIlluminator.setCenterX(sliderInt);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
+        JSlider yPosSlider = new JSlider(JSlider.VERTICAL, -displayIlluminator.getDisplayHeightPx(), displayIlluminator.getDisplayHeightPx(), 0);
+        yPosSlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                int sliderInt = -yPosSlider.getValue();
+                previewImages_.forEach((k, v) -> v.setYPos(sliderInt));
+                previewPanel.repaint();
+                if (yPosSlider.getValueIsAdjusting()) {
+                    return;
+                }
+                try {
+                    displayIlluminator.setCenterY(sliderInt);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
+        JTextField xPosField = new JTextField(4);
+        JTextField yPosField = new JTextField(4);
+
+        JPanel offPanel = new JPanel();
+        offPanel.setBackground(Color.BLACK);
+        tabbedPreviewPane.add("Off", offPanel);
+        ArrayList<JPanel> dpcPanels = new ArrayList<JPanel>();
+        try {
+            int diameter = displayIlluminator.getDpcDiameter();
+            for(int i = 0; i < displayIlluminator.getDpcCount(); i++)
+            {
+                String dpcKey = String.format("DPC%d", i+1);
+                OvalSegmentImage ovalSegmentImage = new OvalSegmentImage(
+                        displayIlluminator.getDisplayWidthPx(),
+                        displayIlluminator.getDisplayHeightPx(),
+                        (float) diameter, (float) diameter,
+                        0.0f, (90.0f * i) % 360, Color.GREEN);
+                previewImages_.put(dpcKey, ovalSegmentImage);
+                dpcPanels.add(new ResizableImagePanel(ovalSegmentImage.getBufferedImage()));
+                dpcPanels.get(i).setBackground(Color.BLACK); // TODO: Make a HashMap that includes all related objs
+                tabbedPreviewPane.add(dpcKey, dpcPanels.get(i));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        tabbedPreviewPane.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                String imageName = tabbedPreviewPane.getTitleAt(tabbedPreviewPane.getSelectedIndex());
+                try {
+                    displayIlluminator.setActiveImage(imageName);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
         previewPanel.add(tabbedPreviewPane, "grow");
+        yPosControls.add(yPosSlider, "growy");
+        yPosControls.add(yPosField);
+        previewPanel.add(yPosControls, "dock east");
+        xPosControls.add(xPosSlider, "growx");
+        xPosControls.add(xPosField, "align center");
+        previewPanel.add(xPosControls, "dock south, span 3");
+
 
 
         Font labelFont = new Font("Arial", Font.BOLD, 14);
@@ -104,9 +178,11 @@ public class DisplayIlluminatorFrame extends JFrame {
         dpcDiameterField_.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String fieldText = dpcDiameterField_.getText();
+                int diameter = Integer.parseInt(dpcDiameterField_.getText());
+                previewImages_.forEach((k, v) -> v.setDiameter(diameter));
+                previewPanel.repaint();
                 try {
-                    core_.setProperty("DisplayIlluminator", "DpcDiameter", fieldText);
+                    displayIlluminator.setDpcDiameter(diameter);
                 } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
@@ -123,11 +199,16 @@ public class DisplayIlluminatorFrame extends JFrame {
         rotationSlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
+                // Do on change
                 int sliderInt = rotationSlider.getValue();
                 rotationField.setText(String.valueOf(sliderInt));
+                previewImages_.forEach((k, v) -> v.setRotation(sliderInt));
+                previewPanel.repaint();
                 if (rotationSlider.getValueIsAdjusting()) {
                     return;
                 }
+
+                // Do on release
                 try {
                     core_.setProperty("DisplayIlluminator", "Rotation", sliderInt);
                 } catch (Exception ex) {
@@ -154,6 +235,8 @@ public class DisplayIlluminatorFrame extends JFrame {
             public void colorChanged(Color newColor) {
                 String colorHex = colorToHexString(newColor);
                 colorField.setText(colorHex);
+                previewImages_.forEach((k, v) -> v.setSegmentColor(newColor));
+                previewPanel.repaint();
                 try {
                     core_.setProperty("DisplayIlluminator", "MonoColor", colorHex);
                 } catch (Exception ex) {
