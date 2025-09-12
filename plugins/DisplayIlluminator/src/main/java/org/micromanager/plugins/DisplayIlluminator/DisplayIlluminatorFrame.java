@@ -53,7 +53,7 @@ public class DisplayIlluminatorFrame extends JFrame {
     private CMMCore core_;
     private JTextField userText_;
     private JTextField dpcDiameterField_;
-    private Map< String, OvalSegmentImage > previewImages_ = new HashMap<String, OvalSegmentImage>();
+    private Map<String, OvalSegmentImage> previewImages_ = new HashMap<String, OvalSegmentImage>();
     private DisplayIlluminatorInterface displayIlluminator;
 
     public DisplayIlluminatorFrame(Studio studio) {
@@ -62,6 +62,7 @@ public class DisplayIlluminatorFrame extends JFrame {
         core_ = studio.getCMMCore();
 
         displayIlluminator = new DisplayIlluminatorInterface(studio_, "DisplayIlluminator");
+        DisplayIlluminatorController controller = new DisplayIlluminatorController(studio_, "DisplayIlluminator");
 
         super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
         JTabbedPane mainTabbedPane = new JTabbedPane();
@@ -79,89 +80,27 @@ public class DisplayIlluminatorFrame extends JFrame {
         illumPatternPane.add(previewPanel, "grow");
 
 
-        JTabbedPane tabbedPreviewPane = new JTabbedPane();
+        DisplayIlluminatorPreviewPane previewPane = controller.createPreviewPane();
 
         JPanel xPosControls = new JPanel(new MigLayout("wrap 1, fill"));
         JPanel yPosControls = new JPanel(new MigLayout("wrap 2, fill"));
-        JSlider xPosSlider = new JSlider(JSlider.HORIZONTAL,-displayIlluminator.getDisplayWidthPx()/2,displayIlluminator.getDisplayWidthPx()/2,0);
-        xPosSlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                int sliderInt = xPosSlider.getValue();
-                previewImages_.forEach((k, v) -> v.setXPos(sliderInt));
-                previewPanel.repaint();
-                if (xPosSlider.getValueIsAdjusting()) {
-                    return;
-                }
-                try {
-                    displayIlluminator.setCenterX(sliderInt);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
+        JSlider xPosSlider = new JSlider(JSlider.HORIZONTAL, -displayIlluminator.getDisplayWidthPx() / 2, displayIlluminator.getDisplayWidthPx() / 2, 0);
+        xPosSlider.addChangeListener((c) -> controller.setCenterX(xPosSlider.getValue(), xPosSlider.getValueIsAdjusting()));
         JSlider yPosSlider = new JSlider(JSlider.VERTICAL, -displayIlluminator.getDisplayHeightPx(), displayIlluminator.getDisplayHeightPx(), 0);
-        yPosSlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                int sliderInt = -yPosSlider.getValue();
-                previewImages_.forEach((k, v) -> v.setYPos(sliderInt));
-                previewPanel.repaint();
-                if (yPosSlider.getValueIsAdjusting()) {
-                    return;
-                }
-                try {
-                    displayIlluminator.setCenterY(sliderInt);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
+        yPosSlider.addChangeListener((c) -> controller.setCenterY(yPosSlider.getValue(), yPosSlider.getValueIsAdjusting()));
         JTextField xPosField = new JTextField(4);
         JTextField yPosField = new JTextField(4);
 
         JPanel offPanel = new JPanel();
         offPanel.setBackground(Color.BLACK);
-        tabbedPreviewPane.add("Off", offPanel);
-        ArrayList<JPanel> dpcPanels = new ArrayList<JPanel>();
-        try {
-            int diameter = displayIlluminator.getDpcDiameter();
-            for(int i = 0; i < displayIlluminator.getDpcCount(); i++)
-            {
-                String dpcKey = String.format("DPC%d", i+1);
-                OvalSegmentImage ovalSegmentImage = new OvalSegmentImage(
-                        displayIlluminator.getDisplayWidthPx(),
-                        displayIlluminator.getDisplayHeightPx(),
-                        (float) diameter, (float) diameter,
-                        0.0f, (90.0f * i) % 360, Color.GREEN);
-                previewImages_.put(dpcKey, ovalSegmentImage);
-                dpcPanels.add(new ResizableImagePanel(ovalSegmentImage.getBufferedImage()));
-                dpcPanels.get(i).setBackground(Color.BLACK); // TODO: Make a HashMap that includes all related objs
-                tabbedPreviewPane.add(dpcKey, dpcPanels.get(i));
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
 
-        tabbedPreviewPane.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                String imageName = tabbedPreviewPane.getTitleAt(tabbedPreviewPane.getSelectedIndex());
-                try {
-                    displayIlluminator.setActiveImage(imageName);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-        previewPanel.add(tabbedPreviewPane, "grow");
+        previewPanel.add(previewPane, "grow");
         yPosControls.add(yPosSlider, "growy");
         yPosControls.add(yPosField);
         previewPanel.add(yPosControls, "dock east");
         xPosControls.add(xPosSlider, "growx");
         xPosControls.add(xPosField, "align center");
         previewPanel.add(xPosControls, "dock south, span 3");
-
 
 
         Font labelFont = new Font("Arial", Font.BOLD, 14);
@@ -171,23 +110,12 @@ public class DisplayIlluminatorFrame extends JFrame {
 
         dpcDiameterField_ = new JTextField(10); // TODO: Sanitise input: https://stackoverflow.com/questions/11093326/restricting-jtextfield-input-to-integers
         try {
-            dpcDiameterField_.setText(core_.getProperty("DisplayIlluminator", "DpcDiameter"));
+            dpcDiameterField_.setText(String.valueOf(controller.getDpcDiameter()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        dpcDiameterField_.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int diameter = Integer.parseInt(dpcDiameterField_.getText());
-                previewImages_.forEach((k, v) -> v.setDiameter(diameter));
-                previewPanel.repaint();
-                try {
-                    displayIlluminator.setDpcDiameter(diameter);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
+
+        dpcDiameterField_.addActionListener((a) -> controller.setDpcDiameter(Integer.parseInt(dpcDiameterField_.getText())));
         controlPanel.add(dpcDiameterField_, "span 2, growx");
 
         JLabel rotationLabel = new JLabel("Rotation (degrees):");
@@ -196,58 +124,30 @@ public class DisplayIlluminatorFrame extends JFrame {
         JTextField rotationField = new JTextField(3);
         rotationField.setText("0");
         JSlider rotationSlider = new JSlider(JSlider.HORIZONTAL, 0, 360, 0);
-        rotationSlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                // Do on change
-                int sliderInt = rotationSlider.getValue();
-                rotationField.setText(String.valueOf(sliderInt));
-                previewImages_.forEach((k, v) -> v.setRotation(sliderInt));
-                previewPanel.repaint();
-                if (rotationSlider.getValueIsAdjusting()) {
-                    return;
-                }
-
-                // Do on release
-                try {
-                    core_.setProperty("DisplayIlluminator", "Rotation", sliderInt);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
+        rotationSlider.addChangeListener((c) -> controller.setRotation(rotationSlider.getValue(), rotationSlider.getValueIsAdjusting()));
         controlPanel.add(rotationSlider, "growx");
         controlPanel.add(rotationField, "growx");
 
-        String initialColor;
+        Color initialColor;
         try {
-            initialColor = core_.getProperty("DisplayIlluminator", "MonoColor");
+            initialColor = controller.getColor();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
         JLabel colorLabel = new JLabel("Colour:");
         colorLabel.setFont(labelFont);
-        ColorChooserButton colorChooser = new ColorChooserButton(Color.decode("#"+initialColor));
+        ColorChooserButton colorChooser = new ColorChooserButton(initialColor);
         JTextField colorField = new JTextField(6);
-        colorField.setText(initialColor);
-        colorChooser.addColorChangedListener(new ColorChangedListener() {
-            @Override
-            public void colorChanged(Color newColor) {
-                String colorHex = colorToHexString(newColor);
-                colorField.setText(colorHex);
-                previewImages_.forEach((k, v) -> v.setSegmentColor(newColor));
-                previewPanel.repaint();
-                try {
-                    core_.setProperty("DisplayIlluminator", "MonoColor", colorHex);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
+        colorField.setText(colorToHexString(initialColor));
+        colorChooser.addColorChangedListener(controller::setColor);
 
         controlPanel.add(colorLabel);
         controlPanel.add(colorChooser, "growx");
         controlPanel.add(colorField, "growx");
+
+        LinkedSliderAndTextEdit test = new LinkedSliderAndTextEdit((x, y) -> controller.setCenterX(x, y));
+        controlPanel.add(test);
 
         // Snap an image, show the image in the Snap/Live view
         JButton snapButton = new JButton("Snap Image");

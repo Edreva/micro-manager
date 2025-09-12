@@ -4,6 +4,7 @@ import mmcorej.CMMCore;
 import mmcorej.StrVector;
 import org.micromanager.Studio;
 
+import java.awt.*;
 import java.util.Arrays;
 
 public class DisplayIlluminatorInterface {
@@ -40,8 +41,24 @@ public class DisplayIlluminatorInterface {
         return Integer.parseInt(mmCore.getProperty(deviceName, "DpcDiameter"));
     }
 
+    public int getDpcWidth() throws Exception {
+        return getDpcDiameter(); // TODO: Update when device adapter is updated
+    }
+
+    public int getDpcHeight() throws Exception {
+        return getDpcDiameter(); // TODO: Update when device adapter is updated
+    }
+
     public int getDpcCount() throws Exception {
         return Integer.parseInt(mmCore.getProperty(deviceName, "DpcPatternCount"));
+    }
+
+    public int getRotation() throws Exception {
+        return Integer.parseInt(mmCore.getProperty(deviceName, "Rotation"));
+    }
+
+    public Color getColor() throws Exception {
+        return Color.decode("#"+mmCore.getProperty(deviceName, "MonoColor"));
     }
 
     public String[] getAvailableImages() throws Exception {

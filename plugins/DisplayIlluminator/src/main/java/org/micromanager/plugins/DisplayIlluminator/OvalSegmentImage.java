@@ -38,11 +38,9 @@ public class OvalSegmentImage {
         segmentExtent_ = 180.0f; // Half-circle
         bkgColor_ = Color.BLACK;
 
-        ovalSegment_ = new Arc2D.Float((frameWidth - ovalWidth)/2, (frameHeight-ovalHeight)/2,
-                ovalWidth, ovalHeight,segmentRotationOffset_ - segmentRotation_, segmentExtent_, Arc2D.PIE);
+        ovalSegment_ = new Arc2D.Float();
+        updateOval();
         image_ = new BufferedImage(frameWidth, frameHeight, java.awt.image.BufferedImage.TYPE_INT_RGB);
-
-        // Draw to image
         updateImage();
     }
 
@@ -57,11 +55,23 @@ public class OvalSegmentImage {
 
     }
 
+    public void setOvalHeight (int ovalHeight) {
+        ovalHeight_ = ovalHeight;
+        updateOval();
+        updateImage();
+    }
+
+
+    public void setOvalWidth (int ovalWidth) {
+        ovalWidth_ = ovalWidth;
+        updateOval();
+        updateImage();
+    }
+
     public void setDiameter (int diameter) {
         ovalHeight_ = diameter;
         ovalWidth_ = diameter;
-        ovalSegment_.setArc((frameWidth_ - ovalWidth_)/2, (frameHeight_-ovalHeight_)/2,
-                ovalWidth_, ovalHeight_, segmentRotationOffset_ + segmentRotation_, segmentExtent_, Arc2D.PIE);
+        updateOval();
         updateImage();
     }
 
@@ -81,6 +91,11 @@ public class OvalSegmentImage {
 
     public ImageIcon createIcon() {
         return new ImageIcon(image_);
+    }
+
+    private void updateOval() {
+        ovalSegment_.setArc((frameWidth_ - ovalWidth_)/2, (frameHeight_-ovalHeight_)/2,
+                ovalWidth_, ovalHeight_, segmentRotationOffset_ - segmentRotation_, segmentExtent_, Arc2D.PIE);
     }
 
     private void updateImage() {
