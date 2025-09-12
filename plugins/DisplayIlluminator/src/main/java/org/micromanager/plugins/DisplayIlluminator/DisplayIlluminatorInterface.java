@@ -37,6 +37,14 @@ public class DisplayIlluminatorInterface {
         return pixelSize;
     }
 
+    public int getCenterX() throws Exception {
+        return Integer.parseInt(mmCore.getProperty(deviceName, "CenterX"));
+    }
+
+    public int getCenterY() throws Exception {
+        return Integer.parseInt(mmCore.getProperty(deviceName, "CenterY"));
+    }
+
     public int getDpcDiameter() throws Exception {
         return Integer.parseInt(mmCore.getProperty(deviceName, "DpcDiameter"));
     }

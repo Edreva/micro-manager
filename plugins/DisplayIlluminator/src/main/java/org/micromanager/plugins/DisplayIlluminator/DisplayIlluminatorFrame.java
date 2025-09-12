@@ -28,8 +28,6 @@ import java.awt.event.ActionListener;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 import mmcorej.CMMCore;
 import net.miginfocom.swing.MigLayout;
@@ -37,8 +35,6 @@ import org.micromanager.Studio;
 import org.micromanager.data.Image;
 import org.micromanager.events.PropertyChangedEvent;
 import org.micromanager.internal.utils.WindowPositioning;
-
-import org.micromanager.plugins.DisplayIlluminator.ColorChooserButton.ColorChangedListener;
 
 // Imports for MMStudio internal packages
 // Plugins should not access internal packages, to ensure modularity and
@@ -74,71 +70,74 @@ public class DisplayIlluminatorFrame extends JFrame {
         JPanel previewPanel = new JPanel();
         previewPanel.setBorder(BorderFactory.createTitledBorder("Preview Panel"));
         JPanel controlPanel = new JPanel();
-        previewPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2"));
-        controlPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2"));
+        previewPanel.setLayout(new MigLayout("wrap 2, fill", "[grow][]"));
+        controlPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2", "[][grow][]"));
         illumPatternPane.add(controlPanel, "grow");
         illumPatternPane.add(previewPanel, "grow");
 
 
         DisplayIlluminatorPreviewPane previewPane = controller.createPreviewPane();
 
-        JPanel xPosControls = new JPanel(new MigLayout("wrap 1, fill"));
-        JPanel yPosControls = new JPanel(new MigLayout("wrap 2, fill"));
-        JSlider xPosSlider = new JSlider(JSlider.HORIZONTAL, -displayIlluminator.getDisplayWidthPx() / 2, displayIlluminator.getDisplayWidthPx() / 2, 0);
-        xPosSlider.addChangeListener((c) -> controller.setCenterX(xPosSlider.getValue(), xPosSlider.getValueIsAdjusting()));
-        JSlider yPosSlider = new JSlider(JSlider.VERTICAL, -displayIlluminator.getDisplayHeightPx(), displayIlluminator.getDisplayHeightPx(), 0);
-        yPosSlider.addChangeListener((c) -> controller.setCenterY(yPosSlider.getValue(), yPosSlider.getValueIsAdjusting()));
-        JTextField xPosField = new JTextField(4);
-        JTextField yPosField = new JTextField(4);
+        LinkedSliderAndField xPosControls = new LinkedSliderAndField(new MigLayout("wrap 1, fill"));
+        xPosControls.slider.setMinimum(-controller.getDisplayWidthPx() / 2);
+        xPosControls.slider.setMaximum(controller.getDisplayWidthPx() / 2);
+        xPosControls.setValue(controller.getCenterX());
+        xPosControls.setFieldConstraints("align center");
+        xPosControls.addListeners(controller::setCenterX);
+
+
+        LinkedSliderAndField yPosControls = new LinkedSliderAndField(new MigLayout("wrap 2, fill", "[][]"));
+        yPosControls.slider.setOrientation(JSlider.VERTICAL);
+        yPosControls.slider.setMinimum(-controller.getDisplayHeightPx() / 2);
+        yPosControls.slider.setMaximum(controller.getDisplayHeightPx() / 2);
+        yPosControls.textField.setColumns(3);
+        yPosControls.setValue(controller.getCenterY());
+        yPosControls.setSliderConstraints("growy");
+        yPosControls.addListeners(controller::setCenterY);
+
 
         JPanel offPanel = new JPanel();
         offPanel.setBackground(Color.BLACK);
 
         previewPanel.add(previewPane, "grow");
-        yPosControls.add(yPosSlider, "growy");
-        yPosControls.add(yPosField);
-        previewPanel.add(yPosControls, "dock east");
-        xPosControls.add(xPosSlider, "growx");
-        xPosControls.add(xPosField, "align center");
-        previewPanel.add(xPosControls, "dock south, span 3");
-
+        previewPanel.add(yPosControls, "growy");
+        previewPanel.add(xPosControls, "growx");
 
         Font labelFont = new Font("Arial", Font.BOLD, 14);
+
+        // Diameter Controls
         JLabel diameterLabel = new JLabel("DPC Diameter (Pixels):");
         diameterLabel.setFont(labelFont);
+        LinkedSliderAndField diameterControl = new LinkedSliderAndField();
+        diameterControl.slider.setMinimum(0);
+        diameterControl.slider.setMaximum(controller.getDisplayWidthPx());
+        diameterControl.setValue(controller.getDpcDiameter());
+        diameterControl.addListeners(controller::setDpcDiameter);
+
         controlPanel.add(diameterLabel);
+        controlPanel.add(diameterControl, "span 2, growx");
 
-        dpcDiameterField_ = new JTextField(10); // TODO: Sanitise input: https://stackoverflow.com/questions/11093326/restricting-jtextfield-input-to-integers
-        try {
-            dpcDiameterField_.setText(String.valueOf(controller.getDpcDiameter()));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
 
-        dpcDiameterField_.addActionListener((a) -> controller.setDpcDiameter(Integer.parseInt(dpcDiameterField_.getText())));
-        controlPanel.add(dpcDiameterField_, "span 2, growx");
-
+        // Rotation Controls
         JLabel rotationLabel = new JLabel("Rotation (degrees):");
         rotationLabel.setFont(labelFont);
+        LinkedSliderAndField rotationControl = new LinkedSliderAndField();
+        rotationControl.slider.setMinimum(0);
+        rotationControl.slider.setMaximum(360);
+        rotationControl.setValue(controller.getRotation());
+        rotationControl.addListeners(controller::setRotation);
+
         controlPanel.add(rotationLabel);
-        JTextField rotationField = new JTextField(3);
-        rotationField.setText("0");
-        JSlider rotationSlider = new JSlider(JSlider.HORIZONTAL, 0, 360, 0);
-        rotationSlider.addChangeListener((c) -> controller.setRotation(rotationSlider.getValue(), rotationSlider.getValueIsAdjusting()));
-        controlPanel.add(rotationSlider, "growx");
-        controlPanel.add(rotationField, "growx");
+        controlPanel.add(rotationControl, "span 2, growx");
 
-        Color initialColor;
-        try {
-            initialColor = controller.getColor();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
 
+        // Colour controls
         JLabel colorLabel = new JLabel("Colour:");
         colorLabel.setFont(labelFont);
+        Color initialColor = controller.getColor();
         ColorChooserButton colorChooser = new ColorChooserButton(initialColor);
         JTextField colorField = new JTextField(6);
+        colorField.setHorizontalAlignment(SwingConstants.CENTER);
         colorField.setText(colorToHexString(initialColor));
         colorChooser.addColorChangedListener(controller::setColor);
 
@@ -146,8 +145,6 @@ public class DisplayIlluminatorFrame extends JFrame {
         controlPanel.add(colorChooser, "growx");
         controlPanel.add(colorField, "growx");
 
-        LinkedSliderAndTextEdit test = new LinkedSliderAndTextEdit((x, y) -> controller.setCenterX(x, y));
-        controlPanel.add(test);
 
         // Snap an image, show the image in the Snap/Live view
         JButton snapButton = new JButton("Snap Image");

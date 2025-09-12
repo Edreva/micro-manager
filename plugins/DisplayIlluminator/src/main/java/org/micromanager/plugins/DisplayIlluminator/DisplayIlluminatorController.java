@@ -56,7 +56,7 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
                 throw new RuntimeException(e);
             }
         }
-        previewPane.setCenterY(centerY);
+        previewPane.setCenterY(-centerY);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        previewPane.setCenterY(centerY);
+        previewPane.setCenterY(-centerY);
     }
 
     @Override
@@ -101,6 +101,17 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setDiameter(diameter); // TODO: Fix naming mismatches / make method name more precise
     }
 
+    public void setDpcDiameter(int diameter, boolean previewOnly) {
+        if (!previewOnly) {
+            try {
+                super.setDpcDiameter(diameter);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        previewPane.setDiameter(diameter); // TODO: Fix naming mismatches / make method name more precise
+    }
+
     @Override
     public void setColor(String colorHex) {
         setColor(Color.decode("#"+colorHex));
@@ -113,6 +124,51 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
             throw new RuntimeException(e);
         }
         previewPane.setSegmentColor(color); // TODO: Fix naming mismatches / make method name more precise
+    }
+
+    @Override
+    public int getDpcDiameter(){
+        try {
+            return super.getDpcDiameter();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int getRotation(){
+        try {
+            return super.getRotation();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public Color getColor() {
+        try {
+            return super.getColor();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int getCenterX() {
+        try {
+            return super.getCenterX();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int getCenterY() {
+        try {
+            return super.getCenterY();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public DisplayIlluminatorPreviewPane createPreviewPane() {
