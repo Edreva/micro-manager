@@ -29,6 +29,8 @@ import java.util.*;
 import java.util.List;
 import javax.swing.*;
 
+import org.micromanager.plugins.DisplayIlluminator.ColorChooserButton.ColorChangedListener;
+
 import mmcorej.CMMCore;
 import net.miginfocom.swing.MigLayout;
 import org.micromanager.Studio;
@@ -49,7 +51,7 @@ public class DisplayIlluminatorFrame extends JFrame {
     private CMMCore core_;
     private JTextField userText_;
     private JTextField dpcDiameterField_;
-    private Map<String, OvalSegmentImage> previewImages_ = new HashMap<String, OvalSegmentImage>();
+    private Map<String, EllipticalShapeImage> previewImages_ = new HashMap<String, EllipticalShapeImage>();
     private DisplayIlluminatorInterface displayIlluminator;
 
     public DisplayIlluminatorFrame(Studio studio) {
@@ -60,17 +62,25 @@ public class DisplayIlluminatorFrame extends JFrame {
         displayIlluminator = new DisplayIlluminatorInterface(studio_, "DisplayIlluminator");
         DisplayIlluminatorController controller = new DisplayIlluminatorController(studio_, "DisplayIlluminator");
 
+        Font labelFont = new Font("Arial", Font.BOLD, 14);
+
         super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
         JTabbedPane mainTabbedPane = new JTabbedPane();
         JPanel illumPatternPane = new JPanel();
-        mainTabbedPane.add("Display Illuminator Settings", illumPatternPane);
+        JPanel prefacePane  = new JPanel();
+        JPanel acquisitionPane = new JPanel();
+        JPanel qdpcPane = new JPanel();
+        mainTabbedPane.add("Source Pattern", illumPatternPane);
+        mainTabbedPane.add("PreFace", prefacePane);
+        mainTabbedPane.add("qDPC", qdpcPane);
+        mainTabbedPane.add("Acquisition", acquisitionPane);
         illumPatternPane.setLayout(new MigLayout("wrap 2, fill, insets 2, gap 2"));
         super.add(mainTabbedPane, "grow, wrap");
 
         JPanel previewPanel = new JPanel();
-        previewPanel.setBorder(BorderFactory.createTitledBorder("Preview Panel"));
+//        previewPanel.setBorder(BorderFactory.createTitledBorder("Preview Panel"));
         JPanel controlPanel = new JPanel();
-        previewPanel.setLayout(new MigLayout("wrap 2, fill", "[grow][]"));
+        previewPanel.setLayout(new MigLayout("wrap 2, fill, gap 0", "[grow][]"));
         controlPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2", "[][grow][]"));
         illumPatternPane.add(controlPanel, "grow");
         illumPatternPane.add(previewPanel, "grow");
@@ -78,20 +88,23 @@ public class DisplayIlluminatorFrame extends JFrame {
 
         DisplayIlluminatorPreviewPane previewPane = controller.createPreviewPane();
 
-        LinkedSliderAndField xPosControls = new LinkedSliderAndField(new MigLayout("wrap 1, fill"));
+        JLabel xPosLabel = new JLabel("xPos:");
+        xPosLabel.setFont(labelFont);
+        LinkedSliderAndField xPosControls = new LinkedSliderAndField(new MigLayout("wrap 1, fillx"), xPosLabel);
         xPosControls.slider.setMinimum(-controller.getDisplayWidthPx() / 2);
         xPosControls.slider.setMaximum(controller.getDisplayWidthPx() / 2);
-        xPosControls.setValue(controller.getCenterX());
+        xPosControls.setValue(controller.getCenterX() - controller.getDpcWidth() / 2); // TODO: Revamp getCenter funcs to be more intuitively named
         xPosControls.setFieldConstraints("align center");
         xPosControls.addListeners(controller::setCenterX);
 
 
-        LinkedSliderAndField yPosControls = new LinkedSliderAndField(new MigLayout("wrap 2, fill", "[][]"));
-        yPosControls.slider.setOrientation(JSlider.VERTICAL);
+        JLabel yPosLabel = new JLabel("yPos:");
+        yPosLabel.setFont(labelFont);
+        LinkedSliderAndField yPosControls = new LinkedSliderAndField(new MigLayout("wrap 2, fill, insets 10 10 0 10", "[][]"), yPosLabel, JSlider.VERTICAL);
         yPosControls.slider.setMinimum(-controller.getDisplayHeightPx() / 2);
         yPosControls.slider.setMaximum(controller.getDisplayHeightPx() / 2);
         yPosControls.textField.setColumns(3);
-        yPosControls.setValue(controller.getCenterY());
+        yPosControls.setValue(controller.getDpcHeight() / 2 - controller.getCenterY()); // TODO: Revamp getCenter funcs to be more intuitively named
         yPosControls.setSliderConstraints("growy");
         yPosControls.addListeners(controller::setCenterY);
 
@@ -99,11 +112,9 @@ public class DisplayIlluminatorFrame extends JFrame {
         JPanel offPanel = new JPanel();
         offPanel.setBackground(Color.BLACK);
 
-        previewPanel.add(previewPane, "grow");
+        previewPanel.add(previewPane, "push, grow");
         previewPanel.add(yPosControls, "growy");
         previewPanel.add(xPosControls, "growx");
-
-        Font labelFont = new Font("Arial", Font.BOLD, 14);
 
         // Diameter Controls
         JLabel diameterLabel = new JLabel("DPC Diameter (Pixels):");
@@ -111,8 +122,8 @@ public class DisplayIlluminatorFrame extends JFrame {
         LinkedSliderAndField diameterControl = new LinkedSliderAndField();
         diameterControl.slider.setMinimum(0);
         diameterControl.slider.setMaximum(controller.getDisplayWidthPx());
-        diameterControl.setValue(controller.getDpcDiameter());
-        diameterControl.addListeners(controller::setDpcDiameter);
+//        diameterControl.setValue(controller.getDpcDiameter());
+        diameterControl.addListeners((d,b) -> controller.setDiameter("DPC", d, b));
 
         controlPanel.add(diameterLabel);
         controlPanel.add(diameterControl, "span 2, growx");
@@ -139,7 +150,21 @@ public class DisplayIlluminatorFrame extends JFrame {
         JTextField colorField = new JTextField(6);
         colorField.setHorizontalAlignment(SwingConstants.CENTER);
         colorField.setText(colorToHexString(initialColor));
-        colorChooser.addColorChangedListener(controller::setColor);
+        colorChooser.addColorChangedListener(new ColorChangedListener() {
+            @Override
+            public void colorChanged(Color newColor) {
+                controller.setColor(newColor);
+                colorField.setText(colorToHexString(newColor));
+            }
+        });
+        colorField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String newColorHex = colorField.getText();
+                colorChooser.setSelectedColor(Color.decode("#" + newColorHex));
+                controller.setColor(newColorHex);
+            }
+        });
 
         controlPanel.add(colorLabel);
         controlPanel.add(colorChooser, "growx");

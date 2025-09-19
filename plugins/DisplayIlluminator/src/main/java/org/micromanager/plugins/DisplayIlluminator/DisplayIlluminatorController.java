@@ -51,7 +51,7 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
     public void setCenterY(int centerY, boolean previewOnly) {
         if (!previewOnly) {
             try {
-                super.setCenterY(centerY);
+                super.setCenterY(-centerY);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -92,26 +92,131 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
     }
 
     @Override
-    public void setDpcDiameter(int diameter) {
+    public void setDiameter(String imageGroupPrefix, int diameter) {
         try {
-            super.setDpcDiameter(diameter);
+            super.setDiameter(imageGroupPrefix, diameter);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        previewPane.setDiameter(diameter); // TODO: Fix naming mismatches / make method name more precise
+        previewPane.setDiameter(imageGroupPrefix, diameter);
     }
 
-    public void setDpcDiameter(int diameter, boolean previewOnly) {
+    public void setDiameter(String imageGroupPrefix, int diameter, boolean previewOnly) {
         if (!previewOnly) {
             try {
-                super.setDpcDiameter(diameter);
+                super.setDiameter(imageGroupPrefix, diameter);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-        previewPane.setDiameter(diameter); // TODO: Fix naming mismatches / make method name more precise
+        previewPane.setDiameter(imageGroupPrefix, diameter);
     }
 
+    @Override
+    public void setInnerDiameter(String imageGroupPrefix, int diameter) {
+        try {
+            super.setInnerDiameter(imageGroupPrefix, diameter);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        previewPane.setInnerDiameter(imageGroupPrefix, diameter);
+    }
+
+    public void setInnerDiameter(String imageGroupPrefix, int diameter, boolean previewOnly) {
+        if (!previewOnly) {
+            try {
+                super.setInnerDiameter(imageGroupPrefix, diameter);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        previewPane.setInnerDiameter(imageGroupPrefix, diameter);
+    }
+
+    @Override
+    public void setInnerWidth(String imageGroupPrefix, int width) {
+        try {
+            super.setInnerWidth(imageGroupPrefix, width);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        previewPane.setInnerWidth(imageGroupPrefix, width);
+    }
+
+    public void setInnerWidth(String imageGroupPrefix, int width, boolean previewOnly) {
+        if (!previewOnly) {
+            try {
+                super.setInnerWidth(imageGroupPrefix, width);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        previewPane.setInnerWidth(imageGroupPrefix, width);
+    }
+    
+    @Override
+    public void setInnerHeight(String imageGroupPrefix, int height) {
+        try {
+            super.setInnerHeight(imageGroupPrefix, height);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        previewPane.setInnerHeight(imageGroupPrefix, height);
+    }
+
+    public void setInnerHeight(String imageGroupPrefix, int height, boolean previewOnly) {
+        if (!previewOnly) {
+            try {
+                super.setInnerHeight(imageGroupPrefix, height);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        previewPane.setInnerHeight(imageGroupPrefix, height);
+    }
+
+    @Override
+    public void setWidth(String imageGroupPrefix, int width) {
+        try {
+            super.setWidth(imageGroupPrefix, width);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        previewPane.setOuterWidth(imageGroupPrefix, width);
+    }
+
+    public void setWidth(String imageGroupPrefix, int width, boolean previewOnly) {
+        if (!previewOnly) {
+            try {
+                super.setWidth(imageGroupPrefix, width);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        previewPane.setOuterWidth(imageGroupPrefix, width);
+    }
+
+    @Override
+    public void setHeight(String imageGroupPrefix, int height) {
+        try {
+            super.setHeight(imageGroupPrefix, height);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        previewPane.setOuterHeight(imageGroupPrefix, height);
+    }
+
+    public void setHeight(String imageGroupPrefix, int height, boolean previewOnly) {
+        if (!previewOnly) {
+            try {
+                super.setHeight(imageGroupPrefix, height);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        previewPane.setOuterHeight(imageGroupPrefix, height);
+    }
+    
     @Override
     public void setColor(String colorHex) {
         setColor(Color.decode("#"+colorHex));
@@ -123,17 +228,21 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        previewPane.setSegmentColor(color); // TODO: Fix naming mismatches / make method name more precise
+        previewPane.setOuterColor(color); // TODO: Fix naming mismatches / make method name more precise
     }
 
     @Override
-    public int getDpcDiameter(){
+    public void setRbOuterColor(String colorHex) {setColor(Color.decode("#"+colorHex));}
+
+    public void setRbOuterColor(Color color) {
         try {
-            return super.getDpcDiameter();
+            super.setRbOuterColor(Utilities.colorToHexString(color));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        previewPane.setOuterColor("RB", color);
     }
+
 
     @Override
     public int getRotation(){
@@ -171,11 +280,30 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         }
     }
 
+    @Override
+    public int getDpcHeight() {
+        try {
+            return super.getDpcHeight();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int getDpcWidth() {
+        try {
+            return super.getDpcWidth();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public DisplayIlluminatorPreviewPane createPreviewPane() {
         previewPane = new DisplayIlluminatorPreviewPane();
         try {
             previewPane.addDpcPanels(getDpcCount(), getDisplayWidthPx(), getDisplayHeightPx(), getDpcWidth(),
                     getDpcHeight(), getRotation(), getColor());
+            previewPane.addBfPanel(getDisplayWidthPx(), getDisplayHeightPx(), getBfWidth(), getBfHeight(), getRotation(), getColor());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
