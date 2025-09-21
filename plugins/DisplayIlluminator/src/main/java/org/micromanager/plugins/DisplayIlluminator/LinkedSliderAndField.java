@@ -1,34 +1,54 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
 import net.miginfocom.swing.MigLayout;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
+import javax.swing.event.ChangeListener;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseWheelListener;
+import java.util.ArrayList;
+import java.util.EventListener;
 import java.util.function.BiConsumer;
 
 public class LinkedSliderAndField extends JPanel {
     public JSlider slider;
     public JTextField textField;
     public MigLayout layout;
-
-    LinkedSliderAndField() {
+    ArrayList<EventListener> userListeners;
+    private int value;
+    private boolean liveUpdateDisplay = false;
+    private BiConsumer<Integer, Boolean> updateMethod;
+    LinkedSliderAndField() { // TODO: Rework these constructors
         MigLayout defaultLayout = new MigLayout("wrap 2, fill", "[grow][]");
-        initialize(defaultLayout, new JLabel(""), JSlider.HORIZONTAL);
+        initialize(defaultLayout, null, new JLabel(""), JSlider.HORIZONTAL);
     }
+    LinkedSliderAndField(BiConsumer<Integer, Boolean> updateMethod) {
+        MigLayout defaultLayout = new MigLayout("wrap 2, fill", "[grow][]");
+        initialize(defaultLayout, updateMethod, new JLabel(""), JSlider.HORIZONTAL);
+    }
+    LinkedSliderAndField(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod) {
+        initialize(layout, updateMethod, new JLabel(""), JSlider.HORIZONTAL);}
 
-    LinkedSliderAndField(MigLayout layout) { initialize(layout, new JLabel(""), JSlider.HORIZONTAL);}
+    LinkedSliderAndField(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod, JLabel label) {
+        initialize(layout, updateMethod, label, JSlider.HORIZONTAL);}
 
-    LinkedSliderAndField(MigLayout layout, JLabel label) { initialize(layout, label, JSlider.HORIZONTAL);}
+    LinkedSliderAndField(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod, JLabel label, int sliderOrientation) {
+        initialize(layout, updateMethod, label, sliderOrientation);}
 
-    LinkedSliderAndField(MigLayout layout, JLabel label, int sliderOrientation) { initialize(layout, label, sliderOrientation);}
 
-    private void initialize(MigLayout layout, JLabel label, int sliderOrientation) {
+    private void initialize(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod,
+                            JLabel label, int sliderOrientation) {
         String defaultSliderConstraints = "growx";
         String defaultFieldConstraints = "";
         int defaultFieldColumnCount = 3;
-
+        this.updateMethod = updateMethod;
+        this.userListeners = new ArrayList<EventListener>();
         slider = new JSlider(sliderOrientation);
         textField = new JTextField(defaultFieldColumnCount);  // TODO: Sanitise input: https://stackoverflow.com/questions/11093326/restricting-jtextfield-input-to-integers
-
+        value = slider.getValue();
         String defaultlabelAndFieldConstraints = "wrap 2";
         MigLayout labelAndFieldLayout = new MigLayout(defaultlabelAndFieldConstraints);
         if (sliderOrientation == JSlider.VERTICAL) {
@@ -58,16 +78,127 @@ public class LinkedSliderAndField extends JPanel {
     }
 
     public void setValue(int value) {
+        this.value = value;
         slider.setValue(value);
         textField.setText(String.valueOf(value));
     }
 
-    public void addListeners(BiConsumer<Integer, Boolean> updateMethod) {
-        slider.addChangeListener((c) -> {
-            textField.setText(String.valueOf(slider.getValue()));
-            updateMethod.accept(slider.getValue(), slider.getValueIsAdjusting());});
-        textField.addActionListener((a) -> {
-            slider.setValue(Integer.parseInt(textField.getText()));
-            updateMethod.accept(slider.getValue(), false);});
+    public int getValue() {
+        return this.value;
+    }
+
+    public BiConsumer<Integer, Boolean> getUpdateMethod() {
+        return this.updateMethod;
+    }
+    public void getUpdateMethod(BiConsumer<Integer, Boolean> updateMethod) {
+        this.updateMethod = updateMethod;
+    }
+
+    public void removeAllListeners() {
+        for (EventListener el : userListeners) {
+            if (el instanceof ChangeListener) {
+                slider.removeChangeListener((ChangeListener) el);
+            } else if (el instanceof  ActionListener) {
+                textField.removeActionListener((ActionListener) el);
+            } else if (el instanceof MouseWheelListener) {
+                slider.removeMouseWheelListener((MouseWheelListener) el);
+            } else if (el instanceof MouseListener) {
+                slider.removeMouseListener((MouseListener) el);
+            }
+        }
+    }
+    public void addChangeListener(ChangeListener changeListener) {
+        slider.addChangeListener(changeListener);
+        this.userListeners.add(changeListener);
+    }
+
+    public void addActionListener(ActionListener actionListener) {
+        textField.addActionListener(actionListener);
+        this.userListeners.add(actionListener);
+    }
+
+    public void addMouseWheelListener(MouseWheelListener mouseWheelListener) {
+        slider.addMouseWheelListener(mouseWheelListener);
+        this.userListeners.add(mouseWheelListener);
+    }
+
+    public void addMouseListener(MouseListener mouseListener) {
+        slider.addMouseListener(mouseListener);
+        this.userListeners.add(mouseListener);
+    }
+
+    public void addListeners() {
+        this.addChangeListener((c) -> {
+            int sliderValue = slider.getValue();
+            if (sliderValue != this.value) {
+                textField.setText(String.valueOf(sliderValue));
+                updateMethod.accept(sliderValue, !liveUpdateDisplay);
+                this.value = sliderValue;
+            }
+        });
+        this.addMouseWheelListener((l) -> {
+            int newSliderValue = slider.getValue() + l.getWheelRotation();
+            this.setValue(newSliderValue);
+            updateMethod.accept(slider.getValue(), !liveUpdateDisplay);
+        });
+        this.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {}
+            @Override
+            public void mousePressed(MouseEvent e) {}
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                updateMethod.accept(slider.getValue(), false);
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {}
+            @Override
+            public void mouseExited(MouseEvent e) {
+                updateMethod.accept(slider.getValue(), false);
+            }
+        });
+        this.addActionListener((a) -> {
+            int textFieldValue = Integer.parseInt(textField.getText());
+            slider.setValue(textFieldValue);
+            });
+    }
+
+
+    public void addListeners(BiConsumer<Integer, Boolean> updateMethod, LinkedSliderAndField syncedSliderField) {
+        this.addChangeListener((c) -> {
+            int sliderValue = slider.getValue();
+            if (sliderValue != this.value) {
+                textField.setText(String.valueOf(sliderValue));
+                syncedSliderField.setValue(sliderValue);
+                updateMethod.accept(sliderValue, true);
+                this.value = sliderValue;
+            }
+        });
+        this.addMouseWheelListener((l) -> {
+            int newSliderValue = slider.getValue() + l.getWheelRotation();
+            this.setValue(newSliderValue);
+            syncedSliderField.setValue(newSliderValue);
+            updateMethod.accept(slider.getValue(), true);
+            });
+        this.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {}
+            @Override
+            public void mousePressed(MouseEvent e) {}
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                updateMethod.accept(slider.getValue(), false);
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {}
+            @Override
+            public void mouseExited(MouseEvent e) {
+                updateMethod.accept(slider.getValue(), false);
+            }
+        });
+        this.addActionListener((a) -> {
+            int textFieldValue = Integer.parseInt(textField.getText());
+            slider.setValue(textFieldValue);
+            syncedSliderField.slider.setValue(textFieldValue);});
     }
 }

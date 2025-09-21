@@ -38,12 +38,6 @@ import org.micromanager.data.Image;
 import org.micromanager.events.PropertyChangedEvent;
 import org.micromanager.internal.utils.WindowPositioning;
 
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
-
 
 public class DisplayIlluminatorFrame extends JFrame {
 
@@ -63,7 +57,6 @@ public class DisplayIlluminatorFrame extends JFrame {
         DisplayIlluminatorController controller = new DisplayIlluminatorController(studio_, "DisplayIlluminator");
 
         Font labelFont = new Font("Arial", Font.BOLD, 14);
-
         super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
         JTabbedPane mainTabbedPane = new JTabbedPane();
         JPanel illumPatternPane = new JPanel();
@@ -81,7 +74,7 @@ public class DisplayIlluminatorFrame extends JFrame {
 //        previewPanel.setBorder(BorderFactory.createTitledBorder("Preview Panel"));
         JPanel controlPanel = new JPanel();
         previewPanel.setLayout(new MigLayout("wrap 2, fill, gap 0", "[grow][]"));
-        controlPanel.setLayout(new MigLayout("wrap 3, fill, insets 2, gap 2", "[][grow][]"));
+        controlPanel.setLayout(new MigLayout("wrap 1, fill, insets 2, gap 2", "[grow]"));
         illumPatternPane.add(controlPanel, "grow");
         illumPatternPane.add(previewPanel, "grow");
 
@@ -90,23 +83,25 @@ public class DisplayIlluminatorFrame extends JFrame {
 
         JLabel xPosLabel = new JLabel("xPos:");
         xPosLabel.setFont(labelFont);
-        LinkedSliderAndField xPosControls = new LinkedSliderAndField(new MigLayout("wrap 1, fillx"), xPosLabel);
+        LinkedSliderAndField xPosControls = new LinkedSliderAndField(
+                new MigLayout("wrap 1, fillx"), controller::setCenterX, xPosLabel);
         xPosControls.slider.setMinimum(-controller.getDisplayWidthPx() / 2);
         xPosControls.slider.setMaximum(controller.getDisplayWidthPx() / 2);
-        xPosControls.setValue(controller.getCenterX() - controller.getDpcWidth() / 2); // TODO: Revamp getCenter funcs to be more intuitively named
+        xPosControls.setValue(controller.getCenterX() - controller.getDisplayWidthPx()/2); // TODO: Revamp getCenter funcs to be more intuitively named
         xPosControls.setFieldConstraints("align center");
-        xPosControls.addListeners(controller::setCenterX);
-
+        xPosControls.addListeners();
 
         JLabel yPosLabel = new JLabel("yPos:");
         yPosLabel.setFont(labelFont);
-        LinkedSliderAndField yPosControls = new LinkedSliderAndField(new MigLayout("wrap 2, fill, insets 10 10 0 10", "[][]"), yPosLabel, JSlider.VERTICAL);
+        LinkedSliderAndField yPosControls = new LinkedSliderAndField(
+                new MigLayout("wrap 2, fill, insets 10 10 0 10", "[][]"),
+                controller::setCenterY, yPosLabel, JSlider.VERTICAL);
         yPosControls.slider.setMinimum(-controller.getDisplayHeightPx() / 2);
         yPosControls.slider.setMaximum(controller.getDisplayHeightPx() / 2);
         yPosControls.textField.setColumns(3);
-        yPosControls.setValue(controller.getDpcHeight() / 2 - controller.getCenterY()); // TODO: Revamp getCenter funcs to be more intuitively named
+        yPosControls.setValue(-controller.getCenterY() + controller.getDisplayHeightPx()/2); // TODO: Revamp getCenter funcs to be more intuitively named
         yPosControls.setSliderConstraints("growy");
-        yPosControls.addListeners(controller::setCenterY);
+        yPosControls.addListeners();
 
 
         JPanel offPanel = new JPanel();
@@ -117,32 +112,49 @@ public class DisplayIlluminatorFrame extends JFrame {
         previewPanel.add(xPosControls, "growx");
 
         // Diameter Controls
-        JLabel diameterLabel = new JLabel("DPC Diameter (Pixels):");
-        diameterLabel.setFont(labelFont);
-        LinkedSliderAndField diameterControl = new LinkedSliderAndField();
-        diameterControl.slider.setMinimum(0);
-        diameterControl.slider.setMaximum(controller.getDisplayWidthPx());
-//        diameterControl.setValue(controller.getDpcDiameter());
-        diameterControl.addListeners((d,b) -> controller.setDiameter("DPC", d, b));
+        JLabel dpcWidthLabel = new JLabel("DPC Width (Pixels):");
+        dpcWidthLabel.setFont(labelFont);
+        JLabel dpcHeightLabel = new JLabel("DPC Height (Pixels):");
+        dpcHeightLabel.setFont(labelFont);
+        LinkedSliderAndField dpcHeightControl = new LinkedSliderAndField(
+                (d,b) -> controller.setHeight("DPC", d, b));
+        LinkedSliderAndField dpcWidthControl = new LinkedSliderAndField(
+                (d,b) -> controller.setWidth("DPC", d, b));
+        dpcHeightControl.slider.setMinimum(0);
+        dpcHeightControl.slider.setMaximum(controller.getDisplayHeightPx());
+        dpcHeightControl.setValue(controller.getDpcHeight());
+        dpcHeightControl.addListeners();
+        dpcWidthControl.slider.setMinimum(0);
+        dpcWidthControl.slider.setMaximum(controller.getDisplayWidthPx());
+        dpcWidthControl.setValue(controller.getDpcWidth());
+        dpcWidthControl.addListeners();
 
-        controlPanel.add(diameterLabel);
-        controlPanel.add(diameterControl, "span 2, growx");
+        SyncedSliders dimensionSliders = new SyncedSliders(
+                dpcWidthControl, dpcWidthLabel,
+                dpcHeightControl, dpcHeightLabel,
+                (d,b) -> controller.setDiameter("DPC", d, b));
+
+        // TODO: Make a class which can encompass two LinkedSliderAndFields and also provide a checkbox to force circularity
+
+        controlPanel.add(dimensionSliders, "growx");
 
 
         // Rotation Controls
+        JPanel rotationPanel = new JPanel(new MigLayout("wrap 2, fill", "[][grow]"));
         JLabel rotationLabel = new JLabel("Rotation (degrees):");
         rotationLabel.setFont(labelFont);
-        LinkedSliderAndField rotationControl = new LinkedSliderAndField();
+        LinkedSliderAndField rotationControl = new LinkedSliderAndField(controller::setRotation);
         rotationControl.slider.setMinimum(0);
         rotationControl.slider.setMaximum(360);
         rotationControl.setValue(controller.getRotation());
-        rotationControl.addListeners(controller::setRotation);
+        rotationControl.addListeners();
 
-        controlPanel.add(rotationLabel);
-        controlPanel.add(rotationControl, "span 2, growx");
-
+        rotationPanel.add(rotationLabel);
+        rotationPanel.add(rotationControl, "span 2, growx");
+        controlPanel.add(rotationPanel, "growx");
 
         // Colour controls
+        JPanel colorPanel = new JPanel(new MigLayout("wrap 3, fill", "[][grow][grow]"));
         JLabel colorLabel = new JLabel("Colour:");
         colorLabel.setFont(labelFont);
         Color initialColor = controller.getColor();
@@ -166,9 +178,10 @@ public class DisplayIlluminatorFrame extends JFrame {
             }
         });
 
-        controlPanel.add(colorLabel);
-        controlPanel.add(colorChooser, "growx");
-        controlPanel.add(colorField, "growx");
+        colorPanel.add(colorLabel, "width 100");
+        colorPanel.add(colorChooser, "growx");
+        colorPanel.add(colorField, "growx");
+        controlPanel.add(colorPanel, "growx");
 
 
         // Snap an image, show the image in the Snap/Live view

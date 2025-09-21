@@ -304,6 +304,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
             previewPane.addDpcPanels(getDpcCount(), getDisplayWidthPx(), getDisplayHeightPx(), getDpcWidth(),
                     getDpcHeight(), getRotation(), getColor());
             previewPane.addBfPanel(getDisplayWidthPx(), getDisplayHeightPx(), getBfWidth(), getBfHeight(), getRotation(), getColor());
+            previewPane.setCenterX(getCenterX() - getDisplayWidthPx()/2); // TODO: Standardise coord system
+            previewPane.setCenterY(getCenterY() - getDisplayHeightPx()/2);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
