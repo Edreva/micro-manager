@@ -100,12 +100,24 @@ public class DisplayIlluminatorInterface {
         return Integer.parseInt(mmCore.getProperty(deviceName, "DfInnerHeight"));
     }
 
+    @Deprecated
     public int getBfWidth() throws Exception {
         return Integer.parseInt(mmCore.getProperty(deviceName, "BfWidth"));
     }
 
+    @Deprecated
     public int getBfHeight() throws Exception {
         return Integer.parseInt(mmCore.getProperty(deviceName, "BfHeight"));
+    }
+
+    public int getWidth (String imageGroupPrefix) throws Exception {
+        return Integer.parseInt(
+                mmCore.getProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"Width"));
+    }
+
+    public int getHeight (String imageGroupPrefix) throws Exception {
+        return Integer.parseInt(
+                mmCore.getProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"Height"));
     }
 
     public int getRotation() throws Exception {

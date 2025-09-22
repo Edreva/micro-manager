@@ -45,6 +45,18 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.add(BF_KEY, bfImagePanel);
     }
 
+    public void addPcPanel(int displayWidthPx, int displayHeightPx,
+                           float ellipseOuterWidth, float ellipseOuterHeight,
+                           float ellipseInnerWidth, float ellipseInnerHeight,
+                           float ellipseRotation, Color color) {
+        EllipticalShapeImage pcImage = new EllipticalShapeImage(displayWidthPx, displayHeightPx, ellipseOuterWidth, ellipseOuterHeight,
+                ellipseInnerWidth, ellipseInnerHeight, ellipseRotation, color, Color.BLACK);
+        previewImages_.put("PC", pcImage);
+        JPanel pcImagePanel = new ResizableImagePanel(pcImage.getBufferedImage());
+        pcImagePanel.setBackground(Color.BLACK);
+        this.add("PC", pcImagePanel);
+    }
+
 
     private void forEachImageWithPrefix(String prefix, Consumer<EllipticalShapeImage> method) {
         this.previewImages_.entrySet()

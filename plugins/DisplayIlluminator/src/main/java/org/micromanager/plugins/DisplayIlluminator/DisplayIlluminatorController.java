@@ -280,6 +280,7 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         }
     }
 
+    @Deprecated
     @Override
     public int getDpcHeight() {
         try {
@@ -289,6 +290,7 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         }
     }
 
+    @Deprecated
     @Override
     public int getDpcWidth() {
         try {
@@ -298,12 +300,33 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         }
     }
 
+    @Override
+    public int getWidth(String imageGroupPrefix) {
+        try {
+            return super.getWidth(imageGroupPrefix);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int getHeight(String imageGroupPrefix) {
+        try {
+            return super.getHeight(imageGroupPrefix);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public DisplayIlluminatorPreviewPane createPreviewPane() {
         previewPane = new DisplayIlluminatorPreviewPane();
         try {
-            previewPane.addDpcPanels(getDpcCount(), getDisplayWidthPx(), getDisplayHeightPx(), getDpcWidth(),
-                    getDpcHeight(), getRotation(), getColor());
-            previewPane.addBfPanel(getDisplayWidthPx(), getDisplayHeightPx(), getBfWidth(), getBfHeight(), getRotation(), getColor());
+            previewPane.addDpcPanels(getDpcCount(), getDisplayWidthPx(), getDisplayHeightPx(), getWidth("DPC"),
+                    getHeight("DPC"), getRotation(), getColor());
+            previewPane.addBfPanel(getDisplayWidthPx(), getDisplayHeightPx(), getWidth("BF"), getHeight("BF"), getRotation(), getColor());
+            previewPane.addPcPanel(getDisplayWidthPx(), getDisplayHeightPx(), getWidth("PC"), getHeight("PC"), getPcInnerWidth(), getPcInnerHeight(),
+                    getRotation(), getColor());
+
             previewPane.setCenterX(getCenterX() - getDisplayWidthPx()/2); // TODO: Standardise coord system
             previewPane.setCenterY(getCenterY() - getDisplayHeightPx()/2);
         } catch (Exception e) {

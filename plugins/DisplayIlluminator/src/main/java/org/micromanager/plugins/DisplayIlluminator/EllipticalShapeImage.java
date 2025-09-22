@@ -199,10 +199,10 @@ public class EllipticalShapeImage {
     }
 
     private void updateArcs() {
-        outerArc_.setArc(-ellipseOuterWidth_/2, -ellipseOuterHeight_/2,
+        outerArc_.setArc(-ellipseOuterWidth_/2.0, -ellipseOuterHeight_/2.0,
                 ellipseOuterWidth_, ellipseOuterHeight_, segmentRotationOffset_ - segmentRotation_, segmentExtent_, Arc2D.PIE);
         if (innerArc_ != null) {
-            innerArc_.setArc(-ellipseInnerWidth_/2, -ellipseInnerHeight_/2,
+            innerArc_.setArc(-ellipseInnerWidth_/2.0, -ellipseInnerHeight_/2.0,
                     ellipseInnerWidth_, ellipseInnerHeight_, segmentRotationOffset_ - segmentRotation_, segmentExtent_, Arc2D.PIE);
         }
     }
