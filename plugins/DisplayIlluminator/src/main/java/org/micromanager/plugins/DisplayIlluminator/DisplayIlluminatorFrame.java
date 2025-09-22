@@ -134,13 +134,35 @@ public class DisplayIlluminatorFrame extends JFrame {
                 dpcHeightControl, dpcHeightLabel,
                 (d,b) -> controller.setDiameter("DPC", d, b));
 
-        // TODO: Make a class which can encompass two LinkedSliderAndFields and also provide a checkbox to force circularity
-
         controlPanel.add(dimensionSliders, "growx");
+
+        JLabel dpcInnerWidthLabel = new JLabel("DPC Inner Width (Pixels):");
+        dpcInnerWidthLabel.setFont(labelFont);
+        JLabel dpcInnerHeightLabel = new JLabel("DPC Inner Height (Pixels):");
+        dpcInnerHeightLabel.setFont(labelFont);
+        LinkedSliderAndField dpcInnerHeightControl = new LinkedSliderAndField(
+                (d,b) -> controller.setInnerHeight("DPC", d, b));
+        LinkedSliderAndField dpcInnerWidthControl = new LinkedSliderAndField(
+                (d,b) -> controller.setInnerWidth("DPC", d, b));
+        dpcInnerHeightControl.slider.setMinimum(0);
+        dpcInnerHeightControl.slider.setMaximum(controller.getDisplayHeightPx());
+        dpcInnerHeightControl.setValue(0);
+        dpcInnerHeightControl.addListeners();
+        dpcInnerWidthControl.slider.setMinimum(0);
+        dpcInnerWidthControl.slider.setMaximum(controller.getDisplayWidthPx());
+        dpcInnerWidthControl.setValue(0);
+        dpcInnerWidthControl.addListeners();
+
+        SyncedSliders innerDimensionSliders = new SyncedSliders(
+                dpcInnerWidthControl, dpcInnerWidthLabel,
+                dpcInnerHeightControl, dpcInnerHeightLabel,
+                (d,b) -> controller.setInnerDiameter("DPC", d, b));
+
+        controlPanel.add(innerDimensionSliders, "growx");
 
 
         // Rotation Controls
-        JPanel rotationPanel = new JPanel(new MigLayout("wrap 2, fill", "[][grow]"));
+        JPanel rotationPanel = new JPanel(new MigLayout("wrap 2, fill", "[150][grow]50"));
         JLabel rotationLabel = new JLabel("Rotation (degrees):");
         rotationLabel.setFont(labelFont);
         LinkedSliderAndField rotationControl = new LinkedSliderAndField(controller::setRotation);
@@ -149,12 +171,12 @@ public class DisplayIlluminatorFrame extends JFrame {
         rotationControl.setValue(controller.getRotation());
         rotationControl.addListeners();
 
-        rotationPanel.add(rotationLabel);
+        rotationPanel.add(rotationLabel, "align left");
         rotationPanel.add(rotationControl, "span 2, growx");
         controlPanel.add(rotationPanel, "growx");
 
         // Colour controls
-        JPanel colorPanel = new JPanel(new MigLayout("wrap 3, fill", "[][grow][grow]"));
+        JPanel colorPanel = new JPanel(new MigLayout("wrap 3, fill", "[150]10[grow][grow]50"));
         JLabel colorLabel = new JLabel("Colour:");
         colorLabel.setFont(labelFont);
         Color initialColor = controller.getColor();
@@ -178,7 +200,7 @@ public class DisplayIlluminatorFrame extends JFrame {
             }
         });
 
-        colorPanel.add(colorLabel, "width 100");
+        colorPanel.add(colorLabel, "align left");
         colorPanel.add(colorChooser, "growx");
         colorPanel.add(colorField, "growx");
         controlPanel.add(colorPanel, "growx");

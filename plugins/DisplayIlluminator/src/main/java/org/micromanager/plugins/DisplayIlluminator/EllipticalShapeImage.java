@@ -102,7 +102,8 @@ public class EllipticalShapeImage {
                                 Color segmentColor) {
 
         initializeImageFrame(frameWidth, frameHeight, Color.BLACK);
-        initializeAnnulus(ellipseOuterWidth, ellipseOuterHeight, ellipseInnerWidth, ellipseInnerHeight, ellipseRotation, 0, 0, segmentColor, Color.BLACK);
+        initializeAnnulus(ellipseOuterWidth, ellipseOuterHeight, ellipseInnerWidth, ellipseInnerHeight,
+                ellipseRotation, 0, 0, segmentColor, Color.BLACK);
         segmentRotation_ = segmentRotation;
         segmentRotationOffset_ = -90.0f;
         segmentExtent_ = 180.0f; // Half-circle
@@ -198,10 +199,10 @@ public class EllipticalShapeImage {
     }
 
     private void updateArcs() {
-        outerArc_.setArc((frameWidth_ - ellipseOuterWidth_)/2, (frameHeight_- ellipseOuterHeight_)/2,
+        outerArc_.setArc(-ellipseOuterWidth_/2, -ellipseOuterHeight_/2,
                 ellipseOuterWidth_, ellipseOuterHeight_, segmentRotationOffset_ - segmentRotation_, segmentExtent_, Arc2D.PIE);
         if (innerArc_ != null) {
-            innerArc_.setArc((frameWidth_ - ellipseInnerWidth_)/2, (frameWidth_ - ellipseInnerHeight_)/2,
+            innerArc_.setArc(-ellipseInnerWidth_/2, -ellipseInnerHeight_/2,
                     ellipseInnerWidth_, ellipseInnerHeight_, segmentRotationOffset_ - segmentRotation_, segmentExtent_, Arc2D.PIE);
         }
     }
@@ -211,11 +212,14 @@ public class EllipticalShapeImage {
         graphics.setColor(bkgColor_);
         graphics.fillRect(0, 0, frameWidth_, frameHeight_);
         graphics.setColor(outerColor_);
-        graphics.rotate(Math.toRadians(ellipseRotation_), (double)frameWidth_/2 + xPos_, (double)frameHeight_/2 + yPos_);
-        graphics.translate(xPos_, yPos_);
+        double xShift = frameWidth_/2.0 + xPos_;
+        double yShift = frameHeight_/2.0 +yPos_;
+        graphics.translate(xShift, yShift);
+        graphics.rotate(Math.toRadians(ellipseRotation_));
         graphics.draw(outerArc_);
         graphics.fill(outerArc_);
         if (innerArc_ != null) {
+            graphics.setColor(innerColor_);
             graphics.draw(innerArc_);
             graphics.fill(innerArc_);
         }

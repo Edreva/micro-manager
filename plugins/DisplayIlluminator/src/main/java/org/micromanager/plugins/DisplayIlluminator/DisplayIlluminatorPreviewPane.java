@@ -25,7 +25,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         {
             String dpcKey = String.format("DPC%d", i+1);
             EllipticalShapeImage ellipticalShapeImage = new EllipticalShapeImage(
-                    displayWidthPx, displayHeightPx, ovalWidth, ovalHeight,
+                    displayWidthPx, displayHeightPx, ovalWidth, ovalHeight, 0.0f, 0.0f,
                     ovalRotation,   (i + 1) * 360.0f / dpcCount, color);
 
             previewImages_.put(dpcKey, ellipticalShapeImage);

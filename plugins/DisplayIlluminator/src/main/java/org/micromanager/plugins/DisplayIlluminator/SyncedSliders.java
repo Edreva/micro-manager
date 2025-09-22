@@ -13,7 +13,7 @@ public class SyncedSliders extends JPanel {
     int maxHeight;
     JCheckBox circularityCB;
     BiConsumer<Integer, Boolean> updateMethod;
-    MigLayout layout = new MigLayout("wrap 3, fill", "[][grow][]");
+    MigLayout layout = new MigLayout("wrap 3, fill", "[150][grow][]");
 
     SyncedSliders() {
         this.setLayout(layout);
@@ -53,13 +53,13 @@ public class SyncedSliders extends JPanel {
                   LinkedSliderAndField heightSliderField, JLabel heightLabel,
                   BiConsumer<Integer, Boolean> updateMethod) {
         this(widthSliderField, heightSliderField, updateMethod);
-        this.add(widthLabel);
+        this.add(widthLabel, "align left");
         this.add(widthSliderField, "growx");
         JPanel temp = new JPanel(new MigLayout("wrap 1, gap 0, insets 0"));
         temp.add(new JLabel("Sync?"), "align center");
         temp.add(circularityCB);
         this.add(temp, "spany 2");
-        this.add(heightLabel);
+        this.add(heightLabel, "align left");
         this.add(heightSliderField, "growx");
 
     }

@@ -160,6 +160,7 @@ public class LinkedSliderAndField extends JPanel {
         this.addActionListener((a) -> {
             int textFieldValue = Integer.parseInt(textField.getText());
             slider.setValue(textFieldValue);
+            updateMethod.accept(textFieldValue, false);
             });
     }
 
@@ -199,6 +200,7 @@ public class LinkedSliderAndField extends JPanel {
         this.addActionListener((a) -> {
             int textFieldValue = Integer.parseInt(textField.getText());
             slider.setValue(textFieldValue);
-            syncedSliderField.slider.setValue(textFieldValue);});
+            syncedSliderField.slider.setValue(textFieldValue);
+            updateMethod.accept(textFieldValue, false);});
     }
 }
