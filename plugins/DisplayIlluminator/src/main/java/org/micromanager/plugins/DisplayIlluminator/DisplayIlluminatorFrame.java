@@ -28,6 +28,8 @@ import java.awt.event.ActionListener;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import mmcorej.Configuration;
 import org.micromanager.plugins.DisplayIlluminator.ColorChooserButton.ColorChangedListener;
@@ -112,134 +114,35 @@ public class DisplayIlluminatorFrame extends JFrame {
         previewPanel.add(yPosControls, "growy");
         previewPanel.add(xPosControls, "growx");
 
-        // Diameter Controls
-        JLabel dpcWidthLabel = new JLabel("DPC Width:");
-        dpcWidthLabel.setFont(labelFont);
-        JLabel dpcHeightLabel = new JLabel("DPC Height:");
-        dpcHeightLabel.setFont(labelFont);
-        LinkedSliderAndField dpcHeightControl = new LinkedSliderAndField(
-                (d,b) -> controller.setHeight("DPC", d, b));
-        LinkedSliderAndField dpcWidthControl = new LinkedSliderAndField(
-                (d,b) -> controller.setWidth("DPC", d, b));
-        dpcHeightControl.slider.setMinimum(0);
-        dpcHeightControl.slider.setMaximum(controller.getDisplayHeightPx());
-        dpcHeightControl.setValue(controller.getHeight("DPC"));
-        dpcHeightControl.addListeners();
-        dpcWidthControl.slider.setMinimum(0);
-        dpcWidthControl.slider.setMaximum(controller.getDisplayWidthPx());
-        dpcWidthControl.setValue(controller.getWidth("DPC"));
-        dpcWidthControl.addListeners();
+        DpcControlPanel dpcControlPanel = new DpcControlPanel(controller);
+        previewPane.addChangeListener(e -> {
+            if (previewPane.getTitleAt(previewPane.getSelectedIndex()).startsWith("DPC")) {
+                controlPanel.add(dpcControlPanel, "grow");
+            }
+            else {
+                controlPanel.remove(dpcControlPanel);
+            }
+        });
 
-        SyncedSliders dimensionSliders = new SyncedSliders(
-                dpcWidthControl, dpcWidthLabel,
-                dpcHeightControl, dpcHeightLabel,
-                (d,b) -> controller.setDiameter("DPC", d, b));
+        BfControlPanel bfControlPanel = new BfControlPanel(controller);
+        previewPane.addChangeListener(e -> {
+            if (previewPane.getTitleAt(previewPane.getSelectedIndex()).startsWith("BF")) {
+                controlPanel.add(bfControlPanel, "grow");
+            }
+            else {
+                controlPanel.remove(bfControlPanel);
+            }
+        });
 
-        controlPanel.add(dimensionSliders, "growx");
-
-        JLabel dpcInnerWidthLabel = new JLabel("DPC Inner Width:");
-        dpcInnerWidthLabel.setFont(labelFont);
-        JLabel dpcInnerHeightLabel = new JLabel("DPC Inner Height:");
-        dpcInnerHeightLabel.setFont(labelFont);
-        LinkedSliderAndField dpcInnerHeightControl = new LinkedSliderAndField(
-                (d,b) -> controller.setInnerHeight("DPC", d, b));
-        LinkedSliderAndField dpcInnerWidthControl = new LinkedSliderAndField(
-                (d,b) -> controller.setInnerWidth("DPC", d, b));
-        dpcInnerHeightControl.slider.setMinimum(0);
-        dpcInnerHeightControl.slider.setMaximum(controller.getDisplayHeightPx());
-        dpcInnerHeightControl.setValue(0);
-        dpcInnerHeightControl.addListeners();
-        dpcInnerWidthControl.slider.setMinimum(0);
-        dpcInnerWidthControl.slider.setMaximum(controller.getDisplayWidthPx());
-        dpcInnerWidthControl.setValue(0);
-        dpcInnerWidthControl.addListeners();
-
-        SyncedSliders innerDimensionSliders = new SyncedSliders(
-                dpcInnerWidthControl, dpcInnerWidthLabel,
-                dpcInnerHeightControl, dpcInnerHeightLabel,
-                (d,b) -> controller.setInnerDiameter("DPC", d, b));
-
-        controlPanel.add(innerDimensionSliders, "growx");
-
-        // Diameter Controls
-        JLabel bfWidthLabel = new JLabel("BF Width:");
-        bfWidthLabel.setFont(labelFont);
-        JLabel bfHeightLabel = new JLabel("BF Height:");
-        bfHeightLabel.setFont(labelFont);
-        LinkedSliderAndField bfHeightControl = new LinkedSliderAndField(
-                (d,b) -> controller.setHeight("BF", d, b));
-        LinkedSliderAndField bfWidthControl = new LinkedSliderAndField(
-                (d,b) -> controller.setWidth("BF", d, b));
-        bfHeightControl.slider.setMinimum(0);
-        bfHeightControl.slider.setMaximum(controller.getDisplayHeightPx());
-        bfHeightControl.setValue(controller.getHeight("BF"));
-        bfHeightControl.addListeners();
-        bfWidthControl.slider.setMinimum(0);
-        bfWidthControl.slider.setMaximum(controller.getDisplayWidthPx());
-        bfWidthControl.setValue(controller.getWidth("BF"));
-        bfWidthControl.addListeners();
-
-        SyncedSliders bfDimensionSliders = new SyncedSliders(
-                bfWidthControl, bfWidthLabel,
-                bfHeightControl, bfHeightLabel,
-                (d,b) -> controller.setDiameter("BF", d, b));
-
-        controlPanel.add(bfDimensionSliders, "growx");
-
-
-        JLabel pcWidthLabel = new JLabel("PC Width:");
-        pcWidthLabel.setFont(labelFont);
-        JLabel pcHeightLabel = new JLabel("PC Height:");
-        pcHeightLabel.setFont(labelFont);
-        LinkedSliderAndField pcHeightControl = new LinkedSliderAndField(
-                (d,b) -> controller.setHeight("PC", d, b));
-        LinkedSliderAndField pcWidthControl = new LinkedSliderAndField(
-                (d,b) -> controller.setWidth("PC", d, b));
-        pcHeightControl.slider.setMinimum(0);
-        pcHeightControl.slider.setMaximum(controller.getDisplayHeightPx());
-        pcHeightControl.setValue(controller.getHeight("PC"));
-        pcHeightControl.addListeners();
-        pcWidthControl.slider.setMinimum(0);
-        pcWidthControl.slider.setMaximum(controller.getDisplayWidthPx());
-        pcWidthControl.setValue(controller.getWidth("PC"));
-        pcWidthControl.addListeners();
-
-        SyncedSliders pcDimensionSliders = new SyncedSliders(
-                pcWidthControl, pcWidthLabel,
-                pcHeightControl, pcHeightLabel,
-                (d,b) -> controller.setDiameter("PC", d, b));
-
-        controlPanel.add(pcDimensionSliders, "growx");
-
-        JLabel pcInnerWidthLabel = new JLabel("PC Inner Width:");
-        pcInnerWidthLabel.setFont(labelFont);
-        JLabel pcInnerHeightLabel = new JLabel("PC Inner Height:");
-        pcInnerHeightLabel.setFont(labelFont);
-        LinkedSliderAndField pcInnerHeightControl = new LinkedSliderAndField(
-                (d,b) -> controller.setInnerHeight("PC", d, b));
-        LinkedSliderAndField pcInnerWidthControl = new LinkedSliderAndField(
-                (d,b) -> controller.setInnerWidth("PC", d, b));
-        pcInnerHeightControl.slider.setMinimum(0);
-        pcInnerHeightControl.slider.setMaximum(controller.getDisplayHeightPx());
-        try {
-            pcInnerHeightControl.setValue(controller.getPcInnerHeight());
-            pcInnerHeightControl.addListeners();
-            pcInnerWidthControl.slider.setMinimum(0);
-            pcInnerWidthControl.slider.setMaximum(controller.getDisplayWidthPx());
-            pcInnerWidthControl.setValue(controller.getPcInnerHeight());
-            pcInnerWidthControl.addListeners();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        SyncedSliders pcInnerDimensionSliders = new SyncedSliders(
-                pcInnerWidthControl, pcInnerWidthLabel,
-                pcInnerHeightControl, pcInnerHeightLabel,
-                (d,b) -> controller.setInnerDiameter("PC", d, b));
-
-        controlPanel.add(pcInnerDimensionSliders, "growx");
-        
-        
+        PcControlPanel pcControlPanel = new PcControlPanel(controller);
+        previewPane.addChangeListener(e -> {
+            if (previewPane.getTitleAt(previewPane.getSelectedIndex()).startsWith("PC")) {
+                controlPanel.add(pcControlPanel, "grow");
+            }
+            else {
+                controlPanel.remove(pcControlPanel);
+            }
+        });
 
         // Rotation Controls
         JPanel rotationPanel = new JPanel(new MigLayout("wrap 2, fill", "[150][grow]50"));
