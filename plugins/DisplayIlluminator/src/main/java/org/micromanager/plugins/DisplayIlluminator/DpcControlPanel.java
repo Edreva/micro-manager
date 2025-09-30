@@ -6,6 +6,21 @@ import javax.swing.*;
 import java.awt.*;
 
 public class DpcControlPanel extends JPanel {
+    private SyncedSliders dimensionSliders;
+    private SyncedSliders innerDimensionSliders;
+
+    void setWidth(int width, boolean updateDisplay) {
+        dimensionSliders.setWidth(width, updateDisplay);
+    }
+    void setInnerWidth(int width, boolean updateDisplay) {
+        innerDimensionSliders.setWidth(width, updateDisplay);
+    }
+    void setHeight(int height, boolean updateDisplay) {
+        dimensionSliders.setHeight(height, updateDisplay);
+    }
+    void setInnerHeight(int height, boolean updateDisplay) {
+        innerDimensionSliders.setHeight(height, updateDisplay);
+    }
 
     DpcControlPanel(DisplayIlluminatorController controller) {
         this(
@@ -37,7 +52,7 @@ public class DpcControlPanel extends JPanel {
         widthControl.setValue(controller.getWidth("DPC"));
         widthControl.addListeners();
 
-        SyncedSliders dimensionSliders = new SyncedSliders(
+        dimensionSliders = new SyncedSliders(
                 widthControl, widthLabel,
                 heightControl, heightLabel,
                 (d, b) -> controller.setDiameter("DPC", d, b));
@@ -61,7 +76,7 @@ public class DpcControlPanel extends JPanel {
         innerWidthControl.setValue(0);
         innerWidthControl.addListeners();
 
-        SyncedSliders innerDimensionSliders = new SyncedSliders(
+        innerDimensionSliders = new SyncedSliders(
                 innerWidthControl, innerWidthLabel,
                 innerHeightControl, innerHeightLabel,
                 (d, b) -> controller.setInnerDiameter("DPC", d, b));

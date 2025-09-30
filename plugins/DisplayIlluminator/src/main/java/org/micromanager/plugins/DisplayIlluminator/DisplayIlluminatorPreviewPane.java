@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 public class DisplayIlluminatorPreviewPane extends JTabbedPane {
     private Map< String, EllipticalShapeImage> previewImages_;
+    public boolean updateDisplay = true;
 
     DisplayIlluminatorPreviewPane() {
         JPanel offPanel = new JPanel();
@@ -57,6 +58,14 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.add("PC", pcImagePanel);
     }
 
+    public void setActiveImage(String imageName) {
+        for (int i = 0; i < this.getTabCount(); i++) // TODO: store a map somewhere to avoid this loop
+        {
+            if(this.getTitleAt(i).equals(imageName)) {
+                this.setSelectedIndex(i);
+            }
+        }
+    }
 
     private void forEachImageWithPrefix(String prefix, Consumer<EllipticalShapeImage> method) {
         this.previewImages_.entrySet()

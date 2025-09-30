@@ -7,13 +7,29 @@ import java.util.function.BiConsumer;
 
 // TODO: Change name to something more precise
 public class SyncedSliders extends JPanel {
-    LinkedSliderAndField widthSliderField;
-    LinkedSliderAndField heightSliderField;
+    private LinkedSliderAndField widthSliderField;
+    private LinkedSliderAndField heightSliderField;
     int maxWidth;
     int maxHeight;
     JCheckBox circularityCB;
     BiConsumer<Integer, Boolean> updateMethod;
     MigLayout layout = new MigLayout("wrap 3, fill", "[150][grow][]");
+
+    void setWidth(int width) {
+        widthSliderField.setValue(width);
+    }
+
+    void setHeight(int height) {
+        heightSliderField.setValue(height);
+    }
+
+    void setWidth(int width, boolean updateDisplay) {
+        widthSliderField.setValue(width, updateDisplay);
+    }
+
+    void setHeight(int height, boolean updateDisplay) {
+        heightSliderField.setValue(height, updateDisplay);
+    }
 
     SyncedSliders() {
         this.setLayout(layout);

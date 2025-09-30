@@ -27,6 +27,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -46,18 +47,32 @@ public class DisplayIlluminatorFrame extends JFrame {
 
     private Studio studio_;
     private CMMCore core_;
-    private JTextField userText_;
-    private JTextField dpcDiameterField_;
+    private DisplayIlluminatorController controller;
     private Map<String, EllipticalShapeImage> previewImages_ = new HashMap<String, EllipticalShapeImage>();
     private DisplayIlluminatorInterface displayIlluminator;
+    private DpcControlPanel dpcControlPanel;
+    private PropertyChangedDispatcher propertyChangedDispatcher;
 
+    private class PropertyChangedDispatcher {
+        private final Map<String, Consumer<PropertyChangedEvent>> uiUpdaterMethods = new HashMap<>();
+        public PropertyChangedDispatcher() {
+            uiUpdaterMethods.put("DpcWidth",  e -> dpcControlPanel.setWidth(Integer.parseInt(e.getValue()), false));
+            uiUpdaterMethods.put("DpcHeight", e -> dpcControlPanel.setHeight(Integer.parseInt(e.getValue()), false));
+            uiUpdaterMethods.put("DpcInnerWidth", e -> dpcControlPanel.setInnerWidth(Integer.parseInt(e.getValue()), false));
+            uiUpdaterMethods.put("DpcInnerHeight", e -> dpcControlPanel.setInnerHeight(Integer.parseInt(e.getValue()), false));
+            uiUpdaterMethods.put("ActiveImage", e -> controller.setActiveImage(e.getValue(), false));
+        }
+        public void dispatchEvent(PropertyChangedEvent event) {
+            uiUpdaterMethods.get(event.getProperty()).accept(event);
+        }
+    }
     public DisplayIlluminatorFrame(Studio studio) {
         super("DisplayIlluminator Plugin GUI");
         studio_ = studio;
         core_ = studio.getCMMCore();
-
         displayIlluminator = new DisplayIlluminatorInterface(studio_, "DisplayIlluminator");
-        DisplayIlluminatorController controller = new DisplayIlluminatorController(studio_, "DisplayIlluminator");
+        controller = new DisplayIlluminatorController(studio_, "DisplayIlluminator");
+        propertyChangedDispatcher = new PropertyChangedDispatcher();
 
         Font labelFont = new Font("Arial", Font.BOLD, 16);
         super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
@@ -114,36 +129,27 @@ public class DisplayIlluminatorFrame extends JFrame {
         previewPanel.add(yPosControls, "growy");
         previewPanel.add(xPosControls, "growx");
 
-        DpcControlPanel dpcControlPanel = new DpcControlPanel(controller);
-        previewPane.addChangeListener(e -> {
-            if (previewPane.getTitleAt(previewPane.getSelectedIndex()).startsWith("DPC")) {
+        dpcControlPanel = new DpcControlPanel(controller);
+        BfControlPanel bfControlPanel = new BfControlPanel(controller);
+        PcControlPanel pcControlPanel = new PcControlPanel(controller);
+
+        previewPane.addChangeListener(e ->
+        {
+            String paneName = previewPane.getTitleAt(previewPane.getSelectedIndex());
+            controlPanel.remove(pcControlPanel);
+            controlPanel.remove(bfControlPanel);
+            controlPanel.remove(dpcControlPanel);
+            if (paneName.startsWith("DPC")) {
                 controlPanel.add(dpcControlPanel, "grow");
             }
-            else {
-                controlPanel.remove(dpcControlPanel);
-            }
-        });
-
-        BfControlPanel bfControlPanel = new BfControlPanel(controller);
-        previewPane.addChangeListener(e -> {
-            if (previewPane.getTitleAt(previewPane.getSelectedIndex()).startsWith("BF")) {
-                controlPanel.add(bfControlPanel, "grow");
-            }
-            else {
-                controlPanel.remove(bfControlPanel);
-            }
-        });
-
-        PcControlPanel pcControlPanel = new PcControlPanel(controller);
-        previewPane.addChangeListener(e -> {
-            if (previewPane.getTitleAt(previewPane.getSelectedIndex()).startsWith("PC")) {
+            else if (paneName.startsWith("PC")) {
                 controlPanel.add(pcControlPanel, "grow");
             }
-            else {
-                controlPanel.remove(pcControlPanel);
+            else if (paneName.startsWith("BF")) {
+                controlPanel.add(bfControlPanel, "grow");
             }
+            controlPanel.updateUI();
         });
-
         // Rotation Controls
         JPanel rotationPanel = new JPanel(new MigLayout("wrap 2, fill", "[150][grow]50"));
         JLabel rotationLabel = new JLabel("Rotation:");
@@ -224,7 +230,7 @@ public class DisplayIlluminatorFrame extends JFrame {
                 getClass().getResource("/org/micromanager/icons/microscope.gif")));
         super.setLocation(100, 100);
         WindowPositioning.setUpLocationMemory(this, this.getClass(), null);
-        super.setMinimumSize(new Dimension(1500, 500));
+        super.setMinimumSize(new Dimension(1000, 600));
         super.pack();
 
 
@@ -237,7 +243,7 @@ public class DisplayIlluminatorFrame extends JFrame {
             core_.defineConfig("IlluminationModes","DPC3", "DisplayIlluminator", "ActiveImage", "DPC3");
             core_.defineConfig("IlluminationModes","DPC4", "DisplayIlluminator", "ActiveImage", "DPC4");
             core_.defineConfig("IlluminationModes","BF", "DisplayIlluminator", "ActiveImage", "BF");
-            core_.defineConfig("IlluminationModes","BF", "DisplayIlluminator", "ActiveImage", "PC");
+            core_.defineConfig("IlluminationModes","PC", "DisplayIlluminator", "ActiveImage", "PC");
             core_.setConfig("IlluminationModes", "Off");
             core_.waitForConfig("IlluminationModes", "Off");
 //            core_.updateSystemStateCache();
@@ -265,12 +271,20 @@ public class DisplayIlluminatorFrame extends JFrame {
      * @param event
      */
     @Subscribe
-    public void onPropertyChanged(PropertyChangedEvent event) { // TODO: Update device adapter to fire propertyChanged events
+    public void onPropertyChanged(PropertyChangedEvent event) throws Exception { // TODO: Update device adapter to fire propertyChanged events
         if (event.getDevice().equals("DisplayIlluminator")) {
-            switch (event.getProperty()) {
-                case "DpcDiameter":
-                    dpcDiameterField_.setText(event.getValue());
-            }
+            propertyChangedDispatcher.dispatchEvent(event);
+//            switch (event.getProperty()) {
+//                case "DpcHeight":
+//                    // TODO: Parse string and dispatch efficiently.
+//                    // Functional Interface
+//                    int height = Integer.parseInt(event.getValue());
+//                    dpcControlPanel.setHeight(height, false);
+//                case "ActiveImage":
+////                    controller.previewPane.removeChangeListener(controller.changeListener);
+//                    controller.setActiveImage(event.getValue(), false);
+////                    controller.previewPane.addChangeListener(controller.changeListener); // TODO: Ew change this
+//            }
         }
     }
 

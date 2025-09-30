@@ -19,7 +19,7 @@ public class LinkedSliderAndField extends JPanel {
     public MigLayout layout;
     ArrayList<EventListener> userListeners;
     private int value;
-    private boolean liveUpdateDisplay = false;
+    private boolean updateDisplay = false; // If false, only update the preview
     private BiConsumer<Integer, Boolean> updateMethod;
     LinkedSliderAndField() { // TODO: Rework these constructors
         MigLayout defaultLayout = new MigLayout("wrap 2, fill", "[grow][]");
@@ -82,6 +82,15 @@ public class LinkedSliderAndField extends JPanel {
         slider.setValue(value);
         textField.setText(String.valueOf(value));
     }
+    
+    public void setValue(int value, boolean updateDisplay) {
+        // TODO: Perhaps instead of flag, temporarily disable the listeners?
+//        boolean prevState = this.updateDisplay;
+//        this.updateDisplay = updateDisplay;
+        setValue(value);
+        updateMethod.accept(value, !updateDisplay);
+//        this.updateDisplay = prevState;
+    }
 
     public int getValue() {
         return this.value;
@@ -132,14 +141,14 @@ public class LinkedSliderAndField extends JPanel {
             int sliderValue = slider.getValue();
             if (sliderValue != this.value) {
                 textField.setText(String.valueOf(sliderValue));
-                updateMethod.accept(sliderValue, !liveUpdateDisplay);
+                updateMethod.accept(sliderValue, updateDisplay);
                 this.value = sliderValue;
             }
         });
         this.addMouseWheelListener((l) -> {
             int newSliderValue = slider.getValue() + l.getWheelRotation();
             this.setValue(newSliderValue);
-            updateMethod.accept(slider.getValue(), !liveUpdateDisplay);
+            updateMethod.accept(slider.getValue(), updateDisplay);
         });
         this.addMouseListener(new MouseListener() {
             @Override
@@ -148,23 +157,23 @@ public class LinkedSliderAndField extends JPanel {
             public void mousePressed(MouseEvent e) {}
             @Override
             public void mouseReleased(MouseEvent e) {
-                updateMethod.accept(slider.getValue(), false);
+                updateMethod.accept(slider.getValue(), true);
             }
             @Override
             public void mouseEntered(MouseEvent e) {}
             @Override
             public void mouseExited(MouseEvent e) {
-                updateMethod.accept(slider.getValue(), false);
+                updateMethod.accept(slider.getValue(), true);
             }
         });
         this.addActionListener((a) -> {
             int textFieldValue = Integer.parseInt(textField.getText());
             slider.setValue(textFieldValue);
-            updateMethod.accept(textFieldValue, false);
+            updateMethod.accept(textFieldValue, true);
             });
     }
 
-
+    // Add listeners such that this ui element is kept in sync with the passed syncedSliderField, both controlling the hardware via updateMethod
     public void addListeners(BiConsumer<Integer, Boolean> updateMethod, LinkedSliderAndField syncedSliderField) {
         this.addChangeListener((c) -> {
             int sliderValue = slider.getValue();

@@ -1,20 +1,30 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
 import org.micromanager.Studio;
+
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 
 // TODO: Perhaps rename this and so-called 'interface' class to more clearly reflect their purposes.
 public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
 
-    private DisplayIlluminatorPreviewPane previewPane; // Currently only supports one preview pane
-
+    public DisplayIlluminatorPreviewPane previewPane; // Currently only supports one preview pane
     DisplayIlluminatorController(Studio studio, String deviceName) {
         super(studio, deviceName);
     }
 
+    public ChangeListener changeListener;
+    // TODO: Replace with something more thought out
+
     public void addPreviewPane(DisplayIlluminatorPreviewPane newPreviewPane) {
-        newPreviewPane.addChangeListener((c) ->
-                setActiveImage(newPreviewPane.getTitleAt(newPreviewPane.getSelectedIndex())));
+        changeListener = new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                setActiveImage(newPreviewPane.getTitleAt(newPreviewPane.getSelectedIndex()), previewPane.updateDisplay);
+            }
+        };
+        newPreviewPane.addChangeListener(changeListener);
         previewPane = newPreviewPane;
     }
 
@@ -25,6 +35,21 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        previewPane.setActiveImage(imageName);
+    }
+
+    public void setActiveImage(String imageName, boolean updateDisplay) {
+        if (updateDisplay) {
+            try {
+                super.setActiveImage(imageName);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        boolean temp = previewPane.updateDisplay;
+        previewPane.updateDisplay = updateDisplay;
+        previewPane.setActiveImage(imageName);
+        previewPane.updateDisplay = temp;
     }
 
     public void setCenterX(int centerX, boolean previewOnly) {
@@ -48,8 +73,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setCenterX(centerX);
     }
 
-    public void setCenterY(int centerY, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setCenterY(int centerY, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setCenterY(-centerY);
             } catch (Exception e) {
@@ -79,8 +104,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setRotation((float) angleDegrees); // TODO: Fix type mismatch
     }
 
-    public void setRotation(int angleDegrees, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setRotation(int angleDegrees, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setRotation(angleDegrees);
             } catch (Exception e) {
@@ -101,8 +126,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setDiameter(imageGroupPrefix, diameter);
     }
 
-    public void setDiameter(String imageGroupPrefix, int diameter, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setDiameter(String imageGroupPrefix, int diameter, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setDiameter(imageGroupPrefix, diameter);
             } catch (Exception e) {
@@ -122,8 +147,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setInnerDiameter(imageGroupPrefix, diameter);
     }
 
-    public void setInnerDiameter(String imageGroupPrefix, int diameter, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setInnerDiameter(String imageGroupPrefix, int diameter, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setInnerDiameter(imageGroupPrefix, diameter);
             } catch (Exception e) {
@@ -143,8 +168,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setInnerWidth(imageGroupPrefix, width);
     }
 
-    public void setInnerWidth(String imageGroupPrefix, int width, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setInnerWidth(String imageGroupPrefix, int width, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setInnerWidth(imageGroupPrefix, width);
             } catch (Exception e) {
@@ -164,8 +189,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setInnerHeight(imageGroupPrefix, height);
     }
 
-    public void setInnerHeight(String imageGroupPrefix, int height, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setInnerHeight(String imageGroupPrefix, int height, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setInnerHeight(imageGroupPrefix, height);
             } catch (Exception e) {
@@ -185,8 +210,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setOuterWidth(imageGroupPrefix, width);
     }
 
-    public void setWidth(String imageGroupPrefix, int width, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setWidth(String imageGroupPrefix, int width, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setWidth(imageGroupPrefix, width);
             } catch (Exception e) {
@@ -206,8 +231,8 @@ public class DisplayIlluminatorController extends DisplayIlluminatorInterface {
         previewPane.setOuterHeight(imageGroupPrefix, height);
     }
 
-    public void setHeight(String imageGroupPrefix, int height, boolean previewOnly) {
-        if (!previewOnly) {
+    public void setHeight(String imageGroupPrefix, int height, boolean updateDisplay) {
+        if (updateDisplay) {
             try {
                 super.setHeight(imageGroupPrefix, height);
             } catch (Exception e) {
