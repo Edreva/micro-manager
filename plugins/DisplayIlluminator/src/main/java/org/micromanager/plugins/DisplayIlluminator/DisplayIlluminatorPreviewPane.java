@@ -1,33 +1,175 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
+
+import org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName;
+import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName.*;
+import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.UpdateSource.UI;
 
 public class DisplayIlluminatorPreviewPane extends JTabbedPane {
     private Map< String, EllipticalShapeImage> previewImages_;
-    public boolean updateDisplay = true;
+    private final Map<DevicePropertyName, Consumer<String>> setMethodMap;
+    private boolean callbackActive = false;
+    private DisplayIlluminatorController controller;
 
-    DisplayIlluminatorPreviewPane() {
+    public enum ImageMode { // TODO: Potentially relocate to controller
+        DPC("DPC"),
+        BF("BF"),
+        DF("DF"),
+        PC("PC"),
+        RB("RB");
+
+        private final String modeName;
+
+        ImageMode(String modeName) {
+            this.modeName = modeName;
+        }
+
+        @Override
+        public String toString() {
+            return modeName;
+        }
+    }
+
+    DisplayIlluminatorPreviewPane(DisplayIlluminatorController controller) {
+        previewImages_= new HashMap<String, EllipticalShapeImage>();
+        this.controller = controller;
+
         JPanel offPanel = new JPanel();
         offPanel.setBackground(Color.BLACK);
         this.add("Off", offPanel);
-        previewImages_= new HashMap<String, EllipticalShapeImage>();
+        this.addDpcPanels();
+        this.addBfPanel();
+        this.addPcPanel();
+        this.addDfPanel();
+
+        this.setCenterX(Integer.parseInt(controller.getProperty(CENTER_X)));
+        this.setCenterY(Integer.parseInt(controller.getProperty(CENTER_Y)));
+//        previewPane.setCenterX(getCenterX() - getDisplayWidthPx()/2); // TODO: Standardise coord system
+//        previewPane.setCenterY(getCenterY() - getDisplayHeightPx()/2);
+
+        setMethodMap = new HashMap<>();
+        setMethodMap.put(CENTER_X, s -> this.setCenterX(Integer.parseInt(s)));
+        setMethodMap.put(CENTER_Y, s -> this.setCenterY(Integer.parseInt(s)));
+        setMethodMap.put(ROTATION, s -> this.setRotation(Float.parseFloat(s)));
+        setMethodMap.put(COLOR, s -> this.setOuterColor(Color.decode("#" + s)));
+        setMethodMap.put(BF_HEIGHT, s -> this.setOuterHeight(ImageMode.BF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(BF_WIDTH, s -> this.setOuterWidth(ImageMode.BF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DF_HEIGHT, s -> this.setOuterHeight(ImageMode.DF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DF_WIDTH, s -> this.setOuterWidth(ImageMode.DF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DPC_COUNT, s -> this.setDpcCount(Integer.parseUnsignedInt(s))); // TODO: Currently unimplemented
+        setMethodMap.put(DPC_HEIGHT, s -> this.setOuterHeight(ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DPC_WIDTH, s -> this.setOuterWidth(ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DPC_INNER_HEIGHT, s -> this.setInnerHeight(ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DPC_INNER_WIDTH, s -> this.setInnerWidth(ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_HEIGHT, s -> this.setOuterHeight(ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_WIDTH, s -> this.setOuterWidth(ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_INNER_HEIGHT, s -> this.setInnerHeight(ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_INNER_WIDTH, s -> this.setInnerWidth(ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(RB_INNER_COLOR, s -> this.setInnerColor(ImageMode.RB, Color.decode("#" + s)));
+        setMethodMap.put(RB_OUTER_COLOR, s -> this.setOuterColor(ImageMode.RB, Color.decode("#" + s)));
+
+
+        // Setup Change listeners
+
+        // Listens for when user changes the active image via the plugin ui (clicks on a tab)
+        // Controller propagates changes elsewhere
+        this.addChangeListener(l -> {
+            callbackActive = true;
+            controller.setProperty(ACTIVE_IMAGE, getSelectedTabTitle(), UI);
+            callbackActive = false;
+        });
+
+        // Listens for when active image was changed by controller.
+        // If the change didn't originate in this class, synchronise the UI to new value.
+        controller.addPropertyChangeListener(ACTIVE_IMAGE, event -> {
+            if (!callbackActive) {
+                setActiveImage((String)event.getNewValue());
+            }
+        });
+
+        addImagePropertyChangeListeners();
     }
 
-    public void addDpcPanels(int dpcCount, int displayWidthPx, int displayHeightPx,
-                             float ovalWidth, float ovalHeight, float ovalRotation, Color color) {
+    // Setup listeners for when any property in setMethodMap is changed by controller.
+    private void addImagePropertyChangeListeners() {
+        for (DevicePropertyName propertyName: setMethodMap.keySet()) {
+            controller.addPropertyChangeListener(propertyName, event -> setProperty(propertyName, event.getNewValue().toString()));
+        }
+    }
+
+    private String getSelectedTabTitle() {
+        return getTitleAt(getSelectedIndex());
+    }
+
+    private void addDpcPanels() {
+        addDpcPanels(
+                Integer.parseInt(controller.getProperty(DPC_COUNT)),
+                Integer.parseInt(controller.getProperty(DISPLAY_WIDTH)),
+                Integer.parseInt(controller.getProperty(DISPLAY_HEIGHT)),
+                Float.parseFloat(controller.getProperty(DPC_WIDTH)),
+                Float.parseFloat(controller.getProperty(DPC_HEIGHT)),
+                Float.parseFloat(controller.getProperty(DPC_INNER_WIDTH)),
+                Float.parseFloat(controller.getProperty(DPC_INNER_HEIGHT)),
+                Float.parseFloat(controller.getProperty(ROTATION)),
+                Color.decode("#" + controller.getProperty(COLOR))
+        );
+    }
+
+    private void addBfPanel() {
+        addBfPanel(
+                Integer.parseInt(controller.getProperty(DISPLAY_WIDTH)),
+                Integer.parseInt(controller.getProperty(DISPLAY_HEIGHT)),
+                Float.parseFloat(controller.getProperty(DPC_WIDTH)),
+                Float.parseFloat(controller.getProperty(DPC_HEIGHT)),
+                Float.parseFloat(controller.getProperty(ROTATION)),
+                Color.decode("#" + controller.getProperty(COLOR))
+        );
+    }
+
+    private void addDfPanel() {
+        addAnnulusPanel(
+                ImageMode.DF,
+                Integer.parseInt(controller.getProperty(DISPLAY_WIDTH)),
+                Integer.parseInt(controller.getProperty(DISPLAY_HEIGHT)),
+                Float.parseFloat(controller.getProperty(DF_WIDTH)),
+                Float.parseFloat(controller.getProperty(DF_HEIGHT)),
+                Float.parseFloat(controller.getProperty(DF_INNER_WIDTH)),
+                Float.parseFloat(controller.getProperty(DF_INNER_HEIGHT)),
+                Float.parseFloat(controller.getProperty(ROTATION)),
+                Color.decode("#" + controller.getProperty(COLOR))
+        );
+    }
+
+    private void addPcPanel() {
+        addAnnulusPanel(
+                ImageMode.PC,
+                Integer.parseInt(controller.getProperty(DISPLAY_WIDTH)),
+                Integer.parseInt(controller.getProperty(DISPLAY_HEIGHT)),
+                Float.parseFloat(controller.getProperty(PC_WIDTH)),
+                Float.parseFloat(controller.getProperty(PC_HEIGHT)),
+                Float.parseFloat(controller.getProperty(PC_INNER_WIDTH)),
+                Float.parseFloat(controller.getProperty(PC_INNER_HEIGHT)),
+                Float.parseFloat(controller.getProperty(ROTATION)),
+                Color.decode("#" + controller.getProperty(COLOR))
+        );
+    }
+
+    private void addDpcPanels(int dpcCount, int displayWidthPx, int displayHeightPx,
+                              float dpcWidth, float dpcHeight, float dpcInnerWidth, float dpcInnerHeight,
+                              float dpcRotation, Color color) {
         for(int i = 0; i < dpcCount; i++)
         {
-            String dpcKey = String.format("DPC%d", i+1);
+            String dpcKey = ImageMode.DPC.toString() + (i + 1);
             EllipticalShapeImage ellipticalShapeImage = new EllipticalShapeImage(
-                    displayWidthPx, displayHeightPx, ovalWidth, ovalHeight, 0.0f, 0.0f,
-                    ovalRotation,   (i + 1) * 360.0f / dpcCount, color);
+                    displayWidthPx, displayHeightPx, dpcWidth, dpcHeight, dpcInnerWidth, dpcInnerHeight,
+                    dpcRotation,   (i + 1) * 360.0f / dpcCount, color);
 
             previewImages_.put(dpcKey, ellipticalShapeImage);
             JPanel dpcImagePanel = new ResizableImagePanel(ellipticalShapeImage.getBufferedImage());
@@ -36,29 +178,33 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         }
     }
 
-    public void addBfPanel(int displayWidthPx, int displayHeightPx,
+    private void addAnnulusPanel(ImageMode name,
+                                 int displayWidthPx, int displayHeightPx,
+                                 float outerWidth, float outerHeight,
+                                 float innerWidth, float innerHeight,
+                                 float rotation, Color color) {
+        String modeKey = name.toString();
+        EllipticalShapeImage annulusImage = new EllipticalShapeImage(
+                displayWidthPx, displayHeightPx, outerWidth, outerHeight,
+                innerWidth, innerHeight, rotation, color, Color.BLACK);
+        previewImages_.put(modeKey, annulusImage);
+        JPanel imagePanel = new ResizableImagePanel(annulusImage.getBufferedImage());
+        imagePanel.setBackground(Color.BLACK);
+        this.add(modeKey, imagePanel);
+
+    }
+
+    private void addBfPanel(int displayWidthPx, int displayHeightPx,
                            float ovalWidth, float ovalHeight, float ovalRotation, Color color) {
-        String BF_KEY = "BF"; // TODO: Define an enum
+        String bfKey = ImageMode.BF.toString();
         EllipticalShapeImage bfImage = new EllipticalShapeImage(displayWidthPx, displayHeightPx, ovalWidth, ovalHeight, ovalRotation, color);
-        previewImages_.put(BF_KEY, bfImage);
+        previewImages_.put(bfKey, bfImage);
         JPanel bfImagePanel = new ResizableImagePanel(bfImage.getBufferedImage());
         bfImagePanel.setBackground(Color.BLACK);
-        this.add(BF_KEY, bfImagePanel);
+        this.add(bfKey, bfImagePanel);
     }
 
-    public void addPcPanel(int displayWidthPx, int displayHeightPx,
-                           float ellipseOuterWidth, float ellipseOuterHeight,
-                           float ellipseInnerWidth, float ellipseInnerHeight,
-                           float ellipseRotation, Color color) {
-        EllipticalShapeImage pcImage = new EllipticalShapeImage(displayWidthPx, displayHeightPx, ellipseOuterWidth, ellipseOuterHeight,
-                ellipseInnerWidth, ellipseInnerHeight, ellipseRotation, color, Color.BLACK);
-        previewImages_.put("PC", pcImage);
-        JPanel pcImagePanel = new ResizableImagePanel(pcImage.getBufferedImage());
-        pcImagePanel.setBackground(Color.BLACK);
-        this.add("PC", pcImagePanel);
-    }
-
-    public void setActiveImage(String imageName) {
+    private void setActiveImage(String imageName) {
         for (int i = 0; i < this.getTabCount(); i++) // TODO: store a map somewhere to avoid this loop
         {
             if(this.getTitleAt(i).equals(imageName)) {
@@ -67,100 +213,112 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         }
     }
 
-    private void forEachImageWithPrefix(String prefix, Consumer<EllipticalShapeImage> method) {
+    private void forEachImageOfMode(ImageMode imageMode, Consumer<EllipticalShapeImage> method) {
         this.previewImages_.entrySet()
                 .stream()
-                .filter(e -> e.getKey().startsWith(prefix))
+                .filter(e -> e.getKey().startsWith(imageMode.toString()))
                 .forEach(e -> method.accept(e.getValue()));
     }
 
-    public void setCenterX(int centerX) {
+    public void setProperty(DevicePropertyName propertyName, String value) {
+        this.setMethodMap.get(propertyName).accept(value);
+    }
+
+
+    private void setDpcCount(int dpcCount) {
+        // TODO:
+        // Remove DPC panels
+        // Add new DPC panels
+        // Set off
+    }
+
+    private void setCenterX(int centerX) {
         this.previewImages_.forEach((k, v) -> v.setXPos(centerX));
         this.repaint();
     }
 
-    public void setCenterY(int centerY) {
+    private void setCenterY(int centerY) {
         this.previewImages_.forEach((k, v) -> v.setYPos(centerY));
         this.repaint();
     }
 
-    public void setRotation(float angleDegrees) {
+    private void setRotation(float angleDegrees) {
         this.previewImages_.forEach((k, v) -> v.setRotation(angleDegrees));
         this.repaint();
     }
 
-    public void setInnerHeight(String imageGroupPrefix, int height) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setEllipseInnerHeight(height));
+    private void setInnerHeight(ImageMode imageMode, int height) {
+        forEachImageOfMode(imageMode, m -> m.setEllipseInnerHeight(height));
         this.repaint();
     }
 
-    public void setInnerHeight(int height) {
+    private void setInnerHeight(int height) {
         previewImages_.forEach((k,image) -> image.setEllipseInnerHeight(height));
         this.repaint();
     }
 
-    public void setInnerWidth(String imageGroupPrefix, int width) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setEllipseInnerWidth(width));
+    private void setInnerWidth(ImageMode imageMode, int width) {
+        forEachImageOfMode(imageMode, m -> m.setEllipseInnerWidth(width));
         this.repaint();
     }
 
-    public void setInnerWidth(int width) {
+    private void setInnerWidth(int width) {
         previewImages_.forEach((k,image) -> image.setEllipseInnerWidth(width));
         this.repaint();
     }
 
-    public void setOuterHeight(String imageGroupPrefix, int height) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setEllipseOuterHeight(height));
+    private void setOuterHeight(ImageMode imageMode, int height) {
+        forEachImageOfMode(imageMode, m -> m.setEllipseOuterHeight(height));
         this.repaint();
     }
 
-    public void setOuterHeight(int height) {
+    private void setOuterHeight(int height) {
         previewImages_.forEach((k,image) -> image.setEllipseOuterHeight(height));
         this.repaint();
     }
 
-    public void setOuterWidth(String imageGroupPrefix, int width) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setEllipseOuterWidth(width));
+    private void setOuterWidth(ImageMode imageMode, int width) {
+        forEachImageOfMode(imageMode, m -> m.setEllipseOuterWidth(width));
         this.repaint();
     }
 
-    public void setOuterWidth(int width) {
+    private void setOuterWidth(int width) {
         previewImages_.forEach((k,image) -> image.setEllipseOuterWidth(width));
         this.repaint();
     }
 
-    public void setDiameter(int diameterInPixels) {
+    private void setDiameter(int diameterInPixels) {
         this.previewImages_.forEach((k, v) -> v.setDiameter(diameterInPixels));
         this.repaint();
     }
 
-    public void setDiameter(String imageGroupPrefix, int diameterInPixels) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setDiameter(diameterInPixels));
+    private void setDiameter(ImageMode imageMode, int diameterInPixels) {
+        forEachImageOfMode(imageMode, m -> m.setDiameter(diameterInPixels));
         this.repaint();
     }
 
-    public void setInnerDiameter(String imageGroupPrefix, int diameterInPixels) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setInnerDiameter(diameterInPixels));
+    private void setInnerDiameter(ImageMode imageMode, int diameterInPixels) {
+        forEachImageOfMode(imageMode, m -> m.setInnerDiameter(diameterInPixels));
         this.repaint();
     }
 
-    public void setOuterColor(Color color) {
+    private void setOuterColor(Color color) {
         this.previewImages_.forEach((k, v) -> v.setOuterColor(color));
         this.repaint();
     }
 
-    public void setInnerColor(Color color) {
+    private void setInnerColor(Color color) {
         this.previewImages_.forEach((k, v) -> v.setInnerColor(color));
         this.repaint();
     }
 
-    public void setOuterColor(String imageGroupPrefix, Color color) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setOuterColor(color));
+    private void setOuterColor(ImageMode imageMode, Color color) {
+        forEachImageOfMode(imageMode, m -> m.setOuterColor(color));
         this.repaint();
     }
 
-    public void setInnerColor(String imageGroupPrefix, Color color) {
-        forEachImageWithPrefix(imageGroupPrefix, m -> m.setInnerColor(color));
+    private void setInnerColor(ImageMode imageMode, Color color) {
+        forEachImageOfMode(imageMode, m -> m.setInnerColor(color));
         this.repaint();
     }
 }

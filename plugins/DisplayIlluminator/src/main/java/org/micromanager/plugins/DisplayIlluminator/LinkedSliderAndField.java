@@ -4,212 +4,112 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseWheelListener;
-import java.util.ArrayList;
-import java.util.EventListener;
-import java.util.function.BiConsumer;
+import java.awt.event.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
-public class LinkedSliderAndField extends JPanel {
+import org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName;
+
+public class LinkedSliderAndField {
+    // Keeping public for ease.
     public JSlider slider;
     public JTextField textField;
-    public MigLayout layout;
-    ArrayList<EventListener> userListeners;
-    private int value;
-    private boolean updateDisplay = false; // If false, only update the preview
-    private BiConsumer<Integer, Boolean> updateMethod;
-    LinkedSliderAndField() { // TODO: Rework these constructors
-        MigLayout defaultLayout = new MigLayout("wrap 2, fill", "[grow][]");
-        initialize(defaultLayout, null, new JLabel(""), JSlider.HORIZONTAL);
-    }
-    LinkedSliderAndField(BiConsumer<Integer, Boolean> updateMethod) {
-        MigLayout defaultLayout = new MigLayout("wrap 2, fill", "[grow][]");
-        initialize(defaultLayout, updateMethod, new JLabel(""), JSlider.HORIZONTAL);
-    }
-    LinkedSliderAndField(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod) {
-        initialize(layout, updateMethod, new JLabel(""), JSlider.HORIZONTAL);}
 
-    LinkedSliderAndField(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod, JLabel label) {
-        initialize(layout, updateMethod, label, JSlider.HORIZONTAL);}
+    private int mouseWheelIncrement = 5;
+    public enum UpdateSource {SLIDER, FIELD, CONTROLLER};
+    private DisplayIlluminatorController controller;
+    private DevicePropertyName propertyToListenFor;
+    private DevicePropertyName propertyToUpdate;
+    private boolean callbackActive = false;
+    PropertyChangeListener propertyChangeListener;
 
-    LinkedSliderAndField(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod, JLabel label, int sliderOrientation) {
-        initialize(layout, updateMethod, label, sliderOrientation);}
+    LinkedSliderAndField(DisplayIlluminatorController controller, DevicePropertyName propertyName) {
+        slider = new JSlider(
+                (int) controller.getPropertyLowerLimit(propertyName),
+                (int) controller.getPropertyUpperLimit(propertyName),
+                Integer.parseInt(controller.getProperty(propertyName)));
+        textField = new JTextField();
+        propertyToUpdate = propertyName;
+        propertyToListenFor = propertyToUpdate;
+        this.controller = controller;
 
-
-    private void initialize(MigLayout layout, BiConsumer<Integer, Boolean> updateMethod,
-                            JLabel label, int sliderOrientation) {
-        String defaultSliderConstraints = "growx";
-        String defaultFieldConstraints = "";
-        int defaultFieldColumnCount = 3;
-        this.updateMethod = updateMethod;
-        this.userListeners = new ArrayList<EventListener>();
-        slider = new JSlider(sliderOrientation);
-        textField = new JTextField(defaultFieldColumnCount);  // TODO: Sanitise input: https://stackoverflow.com/questions/11093326/restricting-jtextfield-input-to-integers
-        value = slider.getValue();
-        String defaultlabelAndFieldConstraints = "wrap 2";
-        MigLayout labelAndFieldLayout = new MigLayout(defaultlabelAndFieldConstraints);
-        if (sliderOrientation == JSlider.VERTICAL) {
-            labelAndFieldLayout.setLayoutConstraints("wrap 1");
-        }
-
-        JPanel labelAndField = new JPanel(labelAndFieldLayout);
-        this.setLayout(layout);
-        this.add(slider, defaultSliderConstraints);
-        labelAndField.add(label);
-        labelAndField.add(textField, defaultFieldConstraints);
-        this.add(labelAndField, "align center");
-    }
-
-    public void setSliderConstraints(Object o) {
-        layout.setComponentConstraints(slider, o);
-    }
-
-    public void setFieldConstraints(Object o) {
-//        layout.setComponentConstraints(textField, o);
-        ((MigLayout)textField.getParent().getLayout()).setComponentConstraints(textField, o);
-    }
-
-    public void setLayout(MigLayout layout) {
-        super.setLayout(layout);
-        this.layout = layout;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-        slider.setValue(value);
-        textField.setText(String.valueOf(value));
-    }
-    
-    public void setValue(int value, boolean updateDisplay) {
-        // TODO: Perhaps instead of flag, temporarily disable the listeners?
-//        boolean prevState = this.updateDisplay;
-//        this.updateDisplay = updateDisplay;
-        setValue(value);
-        updateMethod.accept(value, !updateDisplay);
-//        this.updateDisplay = prevState;
-    }
-
-    public int getValue() {
-        return this.value;
-    }
-
-    public BiConsumer<Integer, Boolean> getUpdateMethod() {
-        return this.updateMethod;
-    }
-    public void getUpdateMethod(BiConsumer<Integer, Boolean> updateMethod) {
-        this.updateMethod = updateMethod;
-    }
-
-    public void removeAllListeners() {
-        for (EventListener el : userListeners) {
-            if (el instanceof ChangeListener) {
-                slider.removeChangeListener((ChangeListener) el);
-            } else if (el instanceof  ActionListener) {
-                textField.removeActionListener((ActionListener) el);
-            } else if (el instanceof MouseWheelListener) {
-                slider.removeMouseWheelListener((MouseWheelListener) el);
-            } else if (el instanceof MouseListener) {
-                slider.removeMouseListener((MouseListener) el);
+        propertyChangeListener = new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent event) {
+                onPropertyChangeEvent(event);
             }
+        };
+
+        controller.addPropertyChangeListener(propertyToListenFor, propertyChangeListener);
+
+        slider.addChangeListener(this::sliderChangeListener);
+        slider.addMouseWheelListener(this::sliderMouseWheelListener);
+        slider.addMouseListener(new sliderMouseListener());
+        textField.addActionListener(this::fieldActionListener);
+    }
+
+    public void onPropertyChangeEvent(PropertyChangeEvent event) {
+        if (!callbackActive) {
+            setValue((String) event.getNewValue(), UpdateSource.CONTROLLER, controller.getUpdateOngoing());
         }
     }
-    public void addChangeListener(ChangeListener changeListener) {
-        slider.addChangeListener(changeListener);
-        this.userListeners.add(changeListener);
+
+    public void setValue(String valueStr, UpdateSource source, boolean updateOngoing) {
+        if (source != UpdateSource.SLIDER) {
+            slider.setValueIsAdjusting(updateOngoing); // Set here to avoid next line from potentially overwriting updateOngoing
+            slider.setValue(Integer.parseInt(valueStr));
+        }
+        if (source != UpdateSource.FIELD) {
+            textField.setText(valueStr);
+        }
+
+        DisplayIlluminatorController.UpdateSource controllerUpdateSource = DisplayIlluminatorController.UpdateSource.UI;
+        if (source == UpdateSource.CONTROLLER) {
+            controllerUpdateSource = DisplayIlluminatorController.UpdateSource.INTERNAL;
+        }
+
+        callbackActive = true;
+        controller.setProperty(propertyToUpdate, valueStr, controllerUpdateSource, updateOngoing);
+        callbackActive = false;
     }
 
-    public void addActionListener(ActionListener actionListener) {
-        textField.addActionListener(actionListener);
-        this.userListeners.add(actionListener);
+    private void sliderChangeListener(ChangeEvent event) {
+        setValue(String.valueOf(slider.getValue()), UpdateSource.SLIDER, slider.getValueIsAdjusting());
     }
 
-    public void addMouseWheelListener(MouseWheelListener mouseWheelListener) {
-        slider.addMouseWheelListener(mouseWheelListener);
-        this.userListeners.add(mouseWheelListener);
+    private void fieldActionListener(ActionEvent event) {
+        setValue(textField.getText(), UpdateSource.FIELD, false);
     }
 
-    public void addMouseListener(MouseListener mouseListener) {
-        slider.addMouseListener(mouseListener);
-        this.userListeners.add(mouseListener);
+    private void sliderMouseWheelListener(MouseWheelEvent event) {
+        slider.setValueIsAdjusting(true);
+        slider.setValue(slider.getValue() + event.getWheelRotation() * mouseWheelIncrement);
     }
 
-    public void addListeners() {
-        this.addChangeListener((c) -> {
-            int sliderValue = slider.getValue();
-            if (sliderValue != this.value) {
-                textField.setText(String.valueOf(sliderValue));
-                updateMethod.accept(sliderValue, updateDisplay);
-                this.value = sliderValue;
-            }
-        });
-        this.addMouseWheelListener((l) -> {
-            int newSliderValue = slider.getValue() + l.getWheelRotation();
-            this.setValue(newSliderValue);
-            updateMethod.accept(slider.getValue(), updateDisplay);
-        });
-        this.addMouseListener(new MouseListener() {
-            @Override
-            public void mouseClicked(MouseEvent e) {}
-            @Override
-            public void mousePressed(MouseEvent e) {}
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                updateMethod.accept(slider.getValue(), true);
-            }
-            @Override
-            public void mouseEntered(MouseEvent e) {}
-            @Override
-            public void mouseExited(MouseEvent e) {
-                updateMethod.accept(slider.getValue(), true);
-            }
-        });
-        this.addActionListener((a) -> {
-            int textFieldValue = Integer.parseInt(textField.getText());
-            slider.setValue(textFieldValue);
-            updateMethod.accept(textFieldValue, true);
-            });
+    private class sliderMouseListener implements MouseListener {
+        @Override
+        public void mouseClicked(MouseEvent e) {}
+        @Override
+        public void mousePressed(MouseEvent e) {}
+        @Override
+        public void mouseReleased(MouseEvent e) {}
+        @Override
+        public void mouseEntered(MouseEvent e) {}
+        @Override
+        public void mouseExited(MouseEvent e) {
+            setValue(String.valueOf(slider.getValue()), LinkedSliderAndField.UpdateSource.SLIDER, false);
+            slider.setValueIsAdjusting(false);
+        }
     }
 
-    // Add listeners such that this ui element is kept in sync with the passed syncedSliderField, both controlling the hardware via updateMethod
-    public void addListeners(BiConsumer<Integer, Boolean> updateMethod, LinkedSliderAndField syncedSliderField) {
-        this.addChangeListener((c) -> {
-            int sliderValue = slider.getValue();
-            if (sliderValue != this.value) {
-                textField.setText(String.valueOf(sliderValue));
-                syncedSliderField.setValue(sliderValue);
-                updateMethod.accept(sliderValue, true);
-                this.value = sliderValue;
-            }
-        });
-        this.addMouseWheelListener((l) -> {
-            int newSliderValue = slider.getValue() + l.getWheelRotation();
-            this.setValue(newSliderValue);
-            syncedSliderField.setValue(newSliderValue);
-            updateMethod.accept(slider.getValue(), true);
-            });
-        this.addMouseListener(new MouseListener() {
-            @Override
-            public void mouseClicked(MouseEvent e) {}
-            @Override
-            public void mousePressed(MouseEvent e) {}
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                updateMethod.accept(slider.getValue(), false);
-            }
-            @Override
-            public void mouseEntered(MouseEvent e) {}
-            @Override
-            public void mouseExited(MouseEvent e) {
-                updateMethod.accept(slider.getValue(), false);
-            }
-        });
-        this.addActionListener((a) -> {
-            int textFieldValue = Integer.parseInt(textField.getText());
-            slider.setValue(textFieldValue);
-            syncedSliderField.slider.setValue(textFieldValue);
-            updateMethod.accept(textFieldValue, false);});
+    public void setMouseWheelIncrement(int mouseWheelIncrement) {
+        this.mouseWheelIncrement = mouseWheelIncrement;
     }
+
+    public DevicePropertyName getPropertyToUpdate() {
+        return propertyToUpdate;
+    }
+
 }

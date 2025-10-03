@@ -6,6 +6,8 @@ import org.micromanager.Studio;
 import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
+import java.util.Objects;
+
 
 /** The Projector plugin provides a user interface for calibration and control
  * of SLM- and Galvo-based phototargeting devices. Phototargeting can be
@@ -19,6 +21,7 @@ public class DisplayIlluminatorPlugin implements MenuPlugin, SciJavaPlugin {
 
     private Studio app_;
     private CMMCore core_;
+    private DisplayIlluminatorController controller_;
     private DisplayIlluminatorFrame frame_;
 //    public void dispose() {
 //        ProjectorControlForm pcf = ProjectorControlForm.getSingleton();
@@ -35,15 +38,21 @@ public class DisplayIlluminatorPlugin implements MenuPlugin, SciJavaPlugin {
 
     @Override
     public void onPluginSelected() {
-        if (core_.getSLMDevice().isEmpty()) { // TODO: Perform a check specifically for DeviceIlluminator instance
-            app_.logs().showMessage("Please load a display before using plugin");
-            return;
+        String slmDeviceLabel = core_.getSLMDevice();
+        try {
+            String slmDeviceName = core_.getDeviceName(slmDeviceLabel);
+            if (!slmDeviceName.equals("DisplayIlluminator")) {
+                app_.logs().showMessage("Please load a DisplayIlluminator before using plugin");
+                return;
+            }
+            else if (controller_ == null) {
+                controller_ = new DisplayIlluminatorController(app_);
+            }
+            System.out.println("Plugin " + MENUNAME + " has been launched.");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        else if (frame_ == null) {
-            frame_ = new DisplayIlluminatorFrame(app_);
-        }
-        frame_.setVisible(true);
-        System.out.println("Plugin " + MENUNAME + " has been launched.");
+
     }
 
     public void configurationChanged() {

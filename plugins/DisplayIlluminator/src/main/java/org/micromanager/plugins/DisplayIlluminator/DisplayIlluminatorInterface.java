@@ -1,8 +1,6 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
 import mmcorej.CMMCore;
-import mmcorej.StrVector;
-import org.micromanager.Studio;
 
 import java.awt.*;
 import java.util.Arrays;
@@ -11,23 +9,23 @@ import static org.apache.commons.lang.StringUtils.capitalize;
 
 public class DisplayIlluminatorInterface {
     private final CMMCore mmCore;
-    private final String deviceName;
+    private final String deviceLabel;
     private int displayWidthPx = 0;
     private int displayHeightPx = 0;
     private float pixelSize = 0;
-    private String[] imageGroups = {"DPC", "BF", "DF", "PC"}; // TODO: Probably best to change to enum throughout
 
-    public DisplayIlluminatorInterface(Studio studio, String deviceName) {
-        this.mmCore = studio.getCMMCore();
-        this.deviceName = deviceName;
+    public DisplayIlluminatorInterface(CMMCore core, String deviceLabel) {
+        this.mmCore = core;
+        this.deviceLabel = deviceLabel;
         try {
-            displayWidthPx = Integer.parseInt(mmCore.getProperty(deviceName, "DisplayWidth_pixels"));
-            displayHeightPx = Integer.parseInt(mmCore.getProperty(deviceName, "DisplayHeight_pixels"));
-            pixelSize = Float.parseFloat(mmCore.getProperty(deviceName, "PixelSize_um"));
+            displayWidthPx = Integer.parseInt(mmCore.getProperty(this.deviceLabel, "DisplayWidth_pixels"));
+            displayHeightPx = Integer.parseInt(mmCore.getProperty(this.deviceLabel, "DisplayHeight_pixels"));
+            pixelSize = Float.parseFloat(mmCore.getProperty(this.deviceLabel, "PixelSize_um"));
         } catch (Exception e) {
-            studio.logs().logError(e);
+            throw new RuntimeException(e);
         }
     }
+
     public int getDisplayWidthPx() {
         return displayWidthPx;
     }
@@ -41,118 +39,118 @@ public class DisplayIlluminatorInterface {
     }
 
     public int getCenterX() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "CenterX"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "CenterX"));
     }
 
     public int getCenterY() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "CenterY"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "CenterY"));
     }
 
     public int getDpcWidth() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DpcWidth"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DpcWidth"));
     }
 
     public int getDpcHeight() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DpcHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DpcHeight"));
     }
 
     public int getDpcInnerWidth() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DpcInnerHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DpcInnerHeight"));
     }
 
     public int getDpcInnerHeight() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DpcInnerHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DpcInnerHeight"));
     }
 
     public int getDpcCount() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DpcPatternCount"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DpcPatternCount"));
     }
 
     public int getPcWidth() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "PcWidth"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "PcWidth"));
     }
 
     public int getPcHeight() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "PcHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "PcHeight"));
     }
 
     public int getPcInnerWidth() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "PcInnerHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "PcInnerHeight"));
     }
 
     public int getPcInnerHeight() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "PcInnerHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "PcInnerHeight"));
     }
 
     public int getDfWidth() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DfWidth"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DfWidth"));
     }
 
     public int getDfHeight() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DfHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DfHeight"));
     }
 
     public int getDfInnerWidth() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DfInnerHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DfInnerHeight"));
     }
 
     public int getDfInnerHeight() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "DfInnerHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "DfInnerHeight"));
     }
 
     @Deprecated
     public int getBfWidth() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "BfWidth"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "BfWidth"));
     }
 
     @Deprecated
     public int getBfHeight() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "BfHeight"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "BfHeight"));
     }
 
     public int getWidth (String imageGroupPrefix) throws Exception {
         return Integer.parseInt(
-                mmCore.getProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"Width"));
+                mmCore.getProperty(deviceLabel, capitalize(imageGroupPrefix.toLowerCase())+"Width"));
     }
 
     public int getHeight (String imageGroupPrefix) throws Exception {
         return Integer.parseInt(
-                mmCore.getProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"Height"));
+                mmCore.getProperty(deviceLabel, capitalize(imageGroupPrefix.toLowerCase())+"Height"));
     }
 
     public int getRotation() throws Exception {
-        return Integer.parseInt(mmCore.getProperty(deviceName, "Rotation"));
+        return Integer.parseInt(mmCore.getProperty(deviceLabel, "Rotation"));
     }
 
     public Color getColor() throws Exception {
-        return Color.decode("#"+mmCore.getProperty(deviceName, "MonoColor"));
+        return Color.decode("#"+mmCore.getProperty(deviceLabel, "MonoColor"));
     }
 
     public Color getRbOuterColor() throws Exception {
-        return Color.decode("#"+mmCore.getProperty(deviceName, "RbOuterColor"));
+        return Color.decode("#"+mmCore.getProperty(deviceLabel, "RbOuterColor"));
     }
 
     public String[] getAvailableImages() throws Exception {
-        return mmCore.getAllowedPropertyValues(deviceName, "ActiveImage").toArray();
+        return mmCore.getAllowedPropertyValues(deviceLabel, "ActiveImage").toArray();
     }
 
     public String getActiveImageName() throws Exception {
-        return mmCore.getProperty(deviceName, "ActiveImage");
+        return mmCore.getProperty(deviceLabel, "ActiveImage");
     }
 
     public void setActiveImage(String imageName) throws Exception {
         if (Arrays.asList(getAvailableImages()).contains(imageName)) {
-            mmCore.setProperty(deviceName, "ActiveImage", imageName);
+            mmCore.setProperty(deviceLabel, "ActiveImage", imageName);
         }
         // TODO: Handle error case
     }
 
     public void setCenterX(int centerX) throws Exception {
-        mmCore.setProperty(deviceName, "CenterX", centerX+displayWidthPx/2); // TODO: Update device adapter to remove need for adjustment based on dims
+        mmCore.setProperty(deviceLabel, "CenterX", centerX+displayWidthPx/2); // TODO: Update device adapter to remove need for adjustment based on dims
     }
 
     public void setCenterY(int centerY) throws Exception {
-        mmCore.setProperty(deviceName, "CenterY", centerY+displayHeightPx/2);
+        mmCore.setProperty(deviceLabel, "CenterY", centerY+displayHeightPx/2);
     }
 
     public void setCenter(int centerX, int centerY) throws Exception {
@@ -161,23 +159,23 @@ public class DisplayIlluminatorInterface {
     }
 
     public void setRotation(int rotation) throws Exception {
-        mmCore.setProperty(deviceName, "Rotation", rotation);
+        mmCore.setProperty(deviceLabel, "Rotation", rotation);
     }
 
     public void setWidth (String imageGroupPrefix, int width) throws Exception {
-        mmCore.setProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"Width", width);
+        mmCore.setProperty(deviceLabel, capitalize(imageGroupPrefix.toLowerCase())+"Width", width);
     }
 
     public void setHeight (String imageGroupPrefix, int height) throws Exception {
-        mmCore.setProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"Height", height);
+        mmCore.setProperty(deviceLabel, capitalize(imageGroupPrefix.toLowerCase())+"Height", height);
     }
 
     public void setInnerWidth (String imageGroupPrefix, int width) throws Exception {
-        mmCore.setProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"InnerWidth", width);
+        mmCore.setProperty(deviceLabel, capitalize(imageGroupPrefix.toLowerCase())+"InnerWidth", width);
     }
 
     public void setInnerHeight (String imageGroupPrefix, int height) throws Exception {
-        mmCore.setProperty(deviceName, capitalize(imageGroupPrefix.toLowerCase())+"InnerHeight", height);
+        mmCore.setProperty(deviceLabel, capitalize(imageGroupPrefix.toLowerCase())+"InnerHeight", height);
     }
 
     public void setDiameter(String imageGroupPrefix, int diameter) throws Exception {
@@ -191,11 +189,11 @@ public class DisplayIlluminatorInterface {
     }
 
     public void setRbOuterColor(String colorHex) throws Exception {
-        mmCore.setProperty(deviceName, "RbOuterColor", colorHex);
+        mmCore.setProperty(deviceLabel, "RbOuterColor", colorHex);
     }
 
     public void setColor(String colorHex) throws Exception {
-        mmCore.setProperty(deviceName, "MonoColor", colorHex);
+        mmCore.setProperty(deviceLabel, "MonoColor", colorHex);
     }
 
 

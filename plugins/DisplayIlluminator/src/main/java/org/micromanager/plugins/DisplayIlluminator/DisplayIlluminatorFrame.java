@@ -42,142 +42,119 @@ import org.micromanager.data.Image;
 import org.micromanager.events.PropertyChangedEvent;
 import org.micromanager.internal.utils.WindowPositioning;
 
+import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName.*;
+import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.UpdateSource.UI;
+
 
 public class DisplayIlluminatorFrame extends JFrame {
-
-    private Studio studio_;
-    private CMMCore core_;
     private DisplayIlluminatorController controller;
-    private Map<String, EllipticalShapeImage> previewImages_ = new HashMap<String, EllipticalShapeImage>();
-    private DisplayIlluminatorInterface displayIlluminator;
-    private DpcControlPanel dpcControlPanel;
-    private PropertyChangedDispatcher propertyChangedDispatcher;
 
-    private class PropertyChangedDispatcher {
-        private final Map<String, Consumer<PropertyChangedEvent>> uiUpdaterMethods = new HashMap<>();
-        public PropertyChangedDispatcher() {
-            uiUpdaterMethods.put("DpcWidth",  e -> dpcControlPanel.setWidth(Integer.parseInt(e.getValue()), false));
-            uiUpdaterMethods.put("DpcHeight", e -> dpcControlPanel.setHeight(Integer.parseInt(e.getValue()), false));
-            uiUpdaterMethods.put("DpcInnerWidth", e -> dpcControlPanel.setInnerWidth(Integer.parseInt(e.getValue()), false));
-            uiUpdaterMethods.put("DpcInnerHeight", e -> dpcControlPanel.setInnerHeight(Integer.parseInt(e.getValue()), false));
-            uiUpdaterMethods.put("ActiveImage", e -> controller.setActiveImage(e.getValue(), false));
-        }
-        public void dispatchEvent(PropertyChangedEvent event) {
-            uiUpdaterMethods.get(event.getProperty()).accept(event);
-        }
-    }
-    public DisplayIlluminatorFrame(Studio studio) {
-        super("DisplayIlluminator Plugin GUI");
-        studio_ = studio;
-        core_ = studio.getCMMCore();
-        displayIlluminator = new DisplayIlluminatorInterface(studio_, "DisplayIlluminator");
-        controller = new DisplayIlluminatorController(studio_, "DisplayIlluminator");
-        propertyChangedDispatcher = new PropertyChangedDispatcher();
+    // Tabs to indicate encapsulation. Could make separate classes if required
+    // Verify if each needs class-level scope
+      private JTabbedPane mainTabbedPane;
+        private JPanel sourcePatternPanel;
+            private SourcePatternControlPanel controlPanel;
+            private JPanel previewPanel;
+                private DisplayIlluminatorPreviewPane previewPane;
 
-        Font labelFont = new Font("Arial", Font.BOLD, 16);
-        super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
-        JTabbedPane mainTabbedPane = new JTabbedPane();
-        JPanel illumPatternPane = new JPanel();
+    private void initializeMainTabbedPane() {
+        mainTabbedPane = new JTabbedPane();
         JPanel prefacePane  = new JPanel();
         JPanel acquisitionPane = new JPanel();
         JPanel qdpcPane = new JPanel();
-        mainTabbedPane.add("Source Pattern", illumPatternPane);
+        initializeSourcePatternPanel();
+        mainTabbedPane.add("Source Pattern", sourcePatternPanel);
         mainTabbedPane.add("PreFace", prefacePane);
         mainTabbedPane.add("qDPC", qdpcPane);
         mainTabbedPane.add("Acquisition", acquisitionPane);
-        illumPatternPane.setLayout(new MigLayout("wrap 2, fill, insets 2, gap 2", "[grow 1][grow 2]"));
-        super.add(mainTabbedPane, "grow, wrap");
+    }
 
-        JPanel previewPanel = new JPanel();
-//        previewPanel.setBorder(BorderFactory.createTitledBorder("Preview Panel"));
-        JPanel controlPanel = new JPanel();
-        previewPanel.setLayout(new MigLayout("wrap 2, fill, gap 0", "[grow][]"));
-        controlPanel.setLayout(new MigLayout("wrap 1, fill, insets 2, gap 2", "[grow]"));
-        illumPatternPane.add(controlPanel, "grow");
-        illumPatternPane.add(previewPanel, "grow");
+    private void initializeSourcePatternPanel() {
+        sourcePatternPanel = new JPanel(new MigLayout("wrap 2, fill, insets 2, gap 2", "[grow 1][grow 2]"));
+//        controlPanel = new SourcePatternControlPanel(new MigLayout("wrap 1, fill, insets 2, gap 2", "[grow]"));
+        controlPanel = new SourcePatternControlPanel(controller, DisplayIlluminatorPreviewPane.ImageMode.DPC);
+        sourcePatternPanel.add(controlPanel, "grow");
+        initializePreviewPanel();
+        sourcePatternPanel.add(previewPanel, "grow");
+    }
 
-
-        DisplayIlluminatorPreviewPane previewPane = controller.createPreviewPane();
+    private void initializePreviewPanel() {
+        previewPanel = new JPanel(new MigLayout("wrap 2, fill, gap 0", "[grow][]"));
+        previewPane = new DisplayIlluminatorPreviewPane(controller);
 
         JLabel xPosLabel = new JLabel("xPos:");
-        xPosLabel.setFont(labelFont);
-        LinkedSliderAndField xPosControls = new LinkedSliderAndField(
-                new MigLayout("wrap 1, fillx"), controller::setCenterX, xPosLabel);
-        xPosControls.slider.setMinimum(-controller.getDisplayWidthPx() / 2);
-        xPosControls.slider.setMaximum(controller.getDisplayWidthPx() / 2);
-        xPosControls.setValue(controller.getCenterX() - controller.getDisplayWidthPx()/2); // TODO: Revamp getCenter funcs to be more intuitively named
-        xPosControls.setFieldConstraints("align center");
-        xPosControls.addListeners();
+//        xPosLabel.setFont(labelFont);
+        LinkedSliderAndField xPosControls = new LinkedSliderAndField(controller, CENTER_X);
 
         JLabel yPosLabel = new JLabel("yPos:");
-        yPosLabel.setFont(labelFont);
-        LinkedSliderAndField yPosControls = new LinkedSliderAndField(
-                new MigLayout("wrap 2, fill, insets 10 10 0 10", "[][]"),
-                controller::setCenterY, yPosLabel, JSlider.VERTICAL);
-        yPosControls.slider.setMinimum(-controller.getDisplayHeightPx() / 2);
-        yPosControls.slider.setMaximum(controller.getDisplayHeightPx() / 2);
-        yPosControls.textField.setColumns(3);
-        yPosControls.setValue(-controller.getCenterY() + controller.getDisplayHeightPx()/2); // TODO: Revamp getCenter funcs to be more intuitively named
-        yPosControls.setSliderConstraints("growy");
-        yPosControls.addListeners();
-
-
-        JPanel offPanel = new JPanel();
-        offPanel.setBackground(Color.BLACK);
+//        yPosLabel.setFont(labelFont);
+        LinkedSliderAndField yPosControls = new LinkedSliderAndField(controller, CENTER_Y);
+        yPosControls.slider.setOrientation(JSlider.VERTICAL);
 
         previewPanel.add(previewPane, "push, grow");
-        previewPanel.add(yPosControls, "growy");
-        previewPanel.add(xPosControls, "growx");
+        previewPanel.add(yPosControls.slider, "growy");
+        previewPanel.add(xPosControls.slider, "growx");
+    }
 
-        dpcControlPanel = new DpcControlPanel(controller);
-        BfControlPanel bfControlPanel = new BfControlPanel(controller);
-        PcControlPanel pcControlPanel = new PcControlPanel(controller);
+    public DisplayIlluminatorFrame(DisplayIlluminatorController controller) {
+        super("DisplayIlluminator Plugin GUI");
+        this.controller = controller;
+        Font labelFont = new Font("Arial", Font.BOLD, 16);
+        super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
+        initializeMainTabbedPane();
+        super.add(mainTabbedPane, "grow, wrap");
 
-        previewPane.addChangeListener(e ->
-        {
-            String paneName = previewPane.getTitleAt(previewPane.getSelectedIndex());
-            controlPanel.remove(pcControlPanel);
-            controlPanel.remove(bfControlPanel);
-            controlPanel.remove(dpcControlPanel);
-            if (paneName.startsWith("DPC")) {
-                controlPanel.add(dpcControlPanel, "grow");
-            }
-            else if (paneName.startsWith("PC")) {
-                controlPanel.add(pcControlPanel, "grow");
-            }
-            else if (paneName.startsWith("BF")) {
-                controlPanel.add(bfControlPanel, "grow");
-            }
-            controlPanel.updateUI();
-        });
+
+//        dpcControlPanel = new DpcControlPanel(controller);
+//        BfControlPanel bfControlPanel = new BfControlPanel(controller);
+//        PcControlPanel pcControlPanel = new PcControlPanel(controller);
+
+//        previewPane.addChangeListener(e ->
+//        {
+//            String paneName = previewPane.getTitleAt(previewPane.getSelectedIndex());
+//            controlPanel.remove(pcControlPanel);
+//            controlPanel.remove(bfControlPanel);
+//            controlPanel.remove(dpcControlPanel);
+//            if (paneName.startsWith("DPC")) {
+//                controlPanel.add(dpcControlPanel, "grow");
+//            }
+//            else if (paneName.startsWith("PC")) {
+//                controlPanel.add(pcControlPanel, "grow");
+//            }
+//            else if (paneName.startsWith("BF")) {
+//                controlPanel.add(bfControlPanel, "grow");
+//            }
+//            controlPanel.updateUI();
+//        });
+
         // Rotation Controls
-        JPanel rotationPanel = new JPanel(new MigLayout("wrap 2, fill", "[150][grow]50"));
-        JLabel rotationLabel = new JLabel("Rotation:");
-        rotationLabel.setFont(labelFont);
-        LinkedSliderAndField rotationControl = new LinkedSliderAndField(controller::setRotation);
-        rotationControl.slider.setMinimum(0);
-        rotationControl.slider.setMaximum(360);
-        rotationControl.setValue(controller.getRotation());
-        rotationControl.addListeners();
-
-        rotationPanel.add(rotationLabel, "align left");
-        rotationPanel.add(rotationControl, "span 2, growx");
-        controlPanel.add(rotationPanel, "growx");
+//        JPanel rotationPanel = new JPanel(new MigLayout("wrap 2, fill", "[150][grow]50"));
+//        JLabel rotationLabel = new JLabel("Rotation:");
+//        rotationLabel.setFont(labelFont);
+//        LinkedSliderAndField rotationControl = new LinkedSliderAndField(controller::setRotation);
+//        rotationControl.slider.setMinimum(0);
+//        rotationControl.slider.setMaximum(360);
+//        rotationControl.setValue(controller.getRotation());
+//        rotationControl.addListeners();
+//
+//        rotationPanel.add(rotationLabel, "align left");
+//        rotationPanel.add(rotationControl, "span 2, growx");
+//        controlPanel.add(rotationPanel, "growx");
 
         // Colour controls
         JPanel colorPanel = new JPanel(new MigLayout("wrap 3, fill", "[150]10[grow][grow]50"));
         JLabel colorLabel = new JLabel("Colour:");
         colorLabel.setFont(labelFont);
-        Color initialColor = controller.getColor();
+        Color initialColor = Color.decode("#" + controller.getProperty(COLOR));
         ColorChooserButton colorChooser = new ColorChooserButton(initialColor);
         JTextField colorField = new JTextField(6);
         colorField.setHorizontalAlignment(SwingConstants.CENTER);
-        colorField.setText(colorToHexString(initialColor));
+        colorField.setText(Utilities.colorToHexString(initialColor));
         colorChooser.addColorChangedListener(new ColorChangedListener() {
             @Override
             public void colorChanged(Color newColor) {
-                controller.setColor(newColor);
-                colorField.setText(colorToHexString(newColor));
+                controller.setProperty(COLOR, newColor, UI);
+                colorField.setText(Utilities.colorToHexString(newColor));
             }
         });
         colorField.addActionListener(new ActionListener() {
@@ -185,7 +162,7 @@ public class DisplayIlluminatorFrame extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 String newColorHex = colorField.getText();
                 colorChooser.setSelectedColor(Color.decode("#" + newColorHex));
-                controller.setColor(newColorHex);
+                controller.setProperty(COLOR, newColorHex, UI);
             }
         });
 
@@ -202,7 +179,7 @@ public class DisplayIlluminatorFrame extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 // Multiple images are returned only if there are multiple
                 // cameras. We only care about the first image.
-                List<Image> images = studio_.live().snap(true);
+                List<Image> images = controller.studio.live().snap(true);
             }
         });
         super.add(snapButton, "wrap");
@@ -218,7 +195,7 @@ public class DisplayIlluminatorFrame extends JFrame {
                 Thread acqThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        studio_.acquisitions().runAcquisition();
+                        controller.studio.acquisitions().runAcquisition();
                     }
                 });
                 acqThread.start();
@@ -234,61 +211,22 @@ public class DisplayIlluminatorFrame extends JFrame {
         super.pack();
 
 
-        // TODO: Remove temporary test code:
-        try {
-            core_.defineConfigGroup("IlluminationModes");
-            core_.defineConfig("IlluminationModes","Off", "DisplayIlluminator", "ActiveImage", "Off");
-            core_.defineConfig("IlluminationModes","DPC1", "DisplayIlluminator", "ActiveImage", "DPC1");
-            core_.defineConfig("IlluminationModes","DPC2", "DisplayIlluminator", "ActiveImage", "DPC2");
-            core_.defineConfig("IlluminationModes","DPC3", "DisplayIlluminator", "ActiveImage", "DPC3");
-            core_.defineConfig("IlluminationModes","DPC4", "DisplayIlluminator", "ActiveImage", "DPC4");
-            core_.defineConfig("IlluminationModes","BF", "DisplayIlluminator", "ActiveImage", "BF");
-            core_.defineConfig("IlluminationModes","PC", "DisplayIlluminator", "ActiveImage", "PC");
-            core_.setConfig("IlluminationModes", "Off");
-            core_.waitForConfig("IlluminationModes", "Off");
-//            core_.updateSystemStateCache();
-            studio_.app().refreshGUI();
-
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        // Registering this class for events means that its event handlers
-        // (that is, methods with the @Subscribe annotation) will be invoked when
-        // an event occurs. You need to call the right registerForEvents() method
-        // to get events; this one is for the application-wide event bus, but
-        // there's also Datastore.registerForEvents() for events specific to one
-        // Datastore, and DisplayWindow.registerForEvents() for events specific
-        // to one image display window.
-        studio_.events().registerForEvents(this);
-    }
-
-    /**
-     * To be invoked, this method must be public and take a single parameter
-     * which is the type of the event we care about.
-     *
-     * @param event
-     */
-    @Subscribe
-    public void onPropertyChanged(PropertyChangedEvent event) throws Exception { // TODO: Update device adapter to fire propertyChanged events
-        if (event.getDevice().equals("DisplayIlluminator")) {
-            propertyChangedDispatcher.dispatchEvent(event);
-//            switch (event.getProperty()) {
-//                case "DpcHeight":
-//                    // TODO: Parse string and dispatch efficiently.
-//                    // Functional Interface
-//                    int height = Integer.parseInt(event.getValue());
-//                    dpcControlPanel.setHeight(height, false);
-//                case "ActiveImage":
-////                    controller.previewPane.removeChangeListener(controller.changeListener);
-//                    controller.setActiveImage(event.getValue(), false);
-////                    controller.previewPane.addChangeListener(controller.changeListener); // TODO: Ew change this
-//            }
-        }
-    }
-
-    public String colorToHexString(java.awt.Color color) {
-        return String.format("%06x", color.getRGB() & 0xFFFFFF);
+//        // TODO: Remove temporary test code:
+//        try {
+//            core_.defineConfigGroup("IlluminationModes");
+//            core_.defineConfig("IlluminationModes","Off", "DisplayIlluminator", "ActiveImage", "Off");
+//            core_.defineConfig("IlluminationModes","DPC1", "DisplayIlluminator", "ActiveImage", "DPC1");
+//            core_.defineConfig("IlluminationModes","DPC2", "DisplayIlluminator", "ActiveImage", "DPC2");
+//            core_.defineConfig("IlluminationModes","DPC3", "DisplayIlluminator", "ActiveImage", "DPC3");
+//            core_.defineConfig("IlluminationModes","DPC4", "DisplayIlluminator", "ActiveImage", "DPC4");
+//            core_.defineConfig("IlluminationModes","BF", "DisplayIlluminator", "ActiveImage", "BF");
+//            core_.defineConfig("IlluminationModes","PC", "DisplayIlluminator", "ActiveImage", "PC");
+//            core_.setConfig("IlluminationModes", "Off");
+//            core_.waitForConfig("IlluminationModes", "Off");
+////            core_.updateSystemStateCache();
+//            studio_.app().refreshGUI();
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
     }
 }

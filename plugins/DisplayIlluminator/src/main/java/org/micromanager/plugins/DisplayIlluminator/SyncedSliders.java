@@ -1,83 +1,66 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
-import net.miginfocom.swing.MigLayout;
-
 import javax.swing.*;
-import java.util.function.BiConsumer;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 // TODO: Change name to something more precise
-public class SyncedSliders extends JPanel {
+public class SyncedSliders {
     private LinkedSliderAndField widthSliderField;
     private LinkedSliderAndField heightSliderField;
+    private final JCheckBox syncCheckBox;
+    private final DisplayIlluminatorController controller;
     int maxWidth;
     int maxHeight;
-    JCheckBox circularityCB;
-    BiConsumer<Integer, Boolean> updateMethod;
-    MigLayout layout = new MigLayout("wrap 3, fill", "[150][grow][]");
+    boolean lastCBState = false;
+    PropertyChangeListener widthSliderSyncListener;
+    PropertyChangeListener heightSliderSyncListener;
 
-    void setWidth(int width) {
-        widthSliderField.setValue(width);
-    }
-
-    void setHeight(int height) {
-        heightSliderField.setValue(height);
-    }
-
-    void setWidth(int width, boolean updateDisplay) {
-        widthSliderField.setValue(width, updateDisplay);
-    }
-
-    void setHeight(int height, boolean updateDisplay) {
-        heightSliderField.setValue(height, updateDisplay);
-    }
-
-    SyncedSliders() {
-        this.setLayout(layout);
-    }
-    SyncedSliders(LinkedSliderAndField widthSliderField,
-                  LinkedSliderAndField heightSliderField,
-                  BiConsumer<Integer, Boolean> updateMethod) {
-        this();
+    SyncedSliders(DisplayIlluminatorController controller,
+                  LinkedSliderAndField widthSliderField,
+                  LinkedSliderAndField heightSliderField) {
+        this.controller = controller;
         this.widthSliderField=widthSliderField;
         this.heightSliderField=heightSliderField;
         this.maxWidth = widthSliderField.slider.getMaximum();
         this.maxHeight = heightSliderField.slider.getMaximum();
-        this.circularityCB = new JCheckBox();
-
-        this.circularityCB.addChangeListener(l -> {
-            this.widthSliderField.removeAllListeners();
-            this.heightSliderField.removeAllListeners();
-            if (circularityCB.isSelected()) {
-                this.heightSliderField.slider.setMaximum(Math.max(maxWidth, maxHeight));
-                this.widthSliderField.slider.setMaximum(Math.max(maxWidth, maxHeight));
-                this.widthSliderField.addListeners(updateMethod, heightSliderField);
-                this.heightSliderField.addListeners(updateMethod, widthSliderField);
-                this.heightSliderField.setValue(widthSliderField.getValue());
-                updateMethod.accept(widthSliderField.getValue(), false);
+        this.syncCheckBox = new JCheckBox("", lastCBState);
 
 
+
+        widthSliderSyncListener = new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                widthSliderField.onPropertyChangeEvent(evt);
             }
-            else {
-                this.heightSliderField.slider.setMaximum(maxHeight);
-                this.widthSliderField.slider.setMaximum(maxWidth);
-                this.widthSliderField.addListeners();
-                this.heightSliderField.addListeners();
+        };
+
+        heightSliderSyncListener = new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                heightSliderField.onPropertyChangeEvent(evt);
+            }
+        };
+
+
+        this.syncCheckBox.addChangeListener(l -> {
+            if (syncCheckBox.isSelected() && !lastCBState) {
+                controller.addPropertyChangeListener(widthSliderField.getPropertyToUpdate(), heightSliderSyncListener);
+                controller.addPropertyChangeListener(heightSliderField.getPropertyToUpdate(), widthSliderSyncListener);
+
+                lastCBState = true;
+                // TODO: Update slider limits
+            }
+            else if (!syncCheckBox.isSelected() && lastCBState) {
+                controller.removePropertyChangeListener(widthSliderField.getPropertyToUpdate(), heightSliderSyncListener);
+                controller.removePropertyChangeListener(heightSliderField.getPropertyToUpdate(), widthSliderSyncListener);
+                lastCBState = false;
+                // TODO: Update slider limits
             }
         });
     }
-    SyncedSliders(LinkedSliderAndField widthSliderField, JLabel widthLabel,
-                  LinkedSliderAndField heightSliderField, JLabel heightLabel,
-                  BiConsumer<Integer, Boolean> updateMethod) {
-        this(widthSliderField, heightSliderField, updateMethod);
-        this.add(widthLabel, "align left");
-        this.add(widthSliderField, "growx");
-        JPanel temp = new JPanel(new MigLayout("wrap 1, gap 0, insets 0"));
-        temp.add(new JLabel("Sync?"), "align center");
-        temp.add(circularityCB);
-        this.add(temp, "spany 2");
-        this.add(heightLabel, "align left");
-        this.add(heightSliderField, "growx");
 
+    public JCheckBox getSyncCheckBox() {
+        return this.syncCheckBox;
     }
-
 }
