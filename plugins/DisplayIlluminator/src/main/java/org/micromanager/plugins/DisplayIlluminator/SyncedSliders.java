@@ -4,6 +4,9 @@ import javax.swing.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 // TODO: Change name to something more precise
 public class SyncedSliders {
     private LinkedSliderAndField widthSliderField;
@@ -45,17 +48,34 @@ public class SyncedSliders {
 
         this.syncCheckBox.addChangeListener(l -> {
             if (syncCheckBox.isSelected() && !lastCBState) {
-                controller.addPropertyChangeListener(widthSliderField.getPropertyToUpdate(), heightSliderSyncListener);
-                controller.addPropertyChangeListener(heightSliderField.getPropertyToUpdate(), widthSliderSyncListener);
+                Utilities.DevicePropertyName widthPropertyName = widthSliderField.getPropertyToUpdate();
+                Utilities.DevicePropertyName heightPropertyName = heightSliderField.getPropertyToUpdate();
+                controller.addPropertyChangeListener(widthPropertyName, heightSliderSyncListener);
+                controller.addPropertyChangeListener(heightPropertyName, widthSliderSyncListener);
+                controller.setProperty(heightPropertyName,
+                        controller.getProperty(widthPropertyName),
+                        DisplayIlluminatorController.UpdateSource.UI);
+
+                // Update the lower/upper limits of the sliders to match eachother.
+                int minLimit = (int) min(
+                        controller.getPropertyLowerLimit(widthPropertyName),
+                        controller.getPropertyLowerLimit(heightPropertyName)
+                );
+                int maxLimit = (int) max(
+                        controller.getPropertyUpperLimit(widthPropertyName),
+                        controller.getPropertyUpperLimit(heightPropertyName));
+                widthSliderField.setLimits(minLimit, maxLimit);
+                heightSliderField.setLimits(minLimit, maxLimit);
 
                 lastCBState = true;
-                // TODO: Update slider limits
             }
             else if (!syncCheckBox.isSelected() && lastCBState) {
                 controller.removePropertyChangeListener(widthSliderField.getPropertyToUpdate(), heightSliderSyncListener);
                 controller.removePropertyChangeListener(heightSliderField.getPropertyToUpdate(), widthSliderSyncListener);
+                widthSliderField.resetSliderLimits();
+                heightSliderField.resetSliderLimits();
+
                 lastCBState = false;
-                // TODO: Update slider limits
             }
         });
     }

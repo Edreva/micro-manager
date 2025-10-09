@@ -20,89 +20,141 @@
 
 package org.micromanager.plugins.DisplayIlluminator;
 
-import com.google.common.eventbus.Subscribe;
-
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.*;
 import java.util.List;
-import java.util.function.Consumer;
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
-import mmcorej.Configuration;
 import org.micromanager.plugins.DisplayIlluminator.ColorChooserButton.ColorChangedListener;
 
-import mmcorej.CMMCore;
 import net.miginfocom.swing.MigLayout;
-import org.micromanager.Studio;
 import org.micromanager.data.Image;
-import org.micromanager.events.PropertyChangedEvent;
 import org.micromanager.internal.utils.WindowPositioning;
 
-import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName.*;
+import static org.micromanager.plugins.DisplayIlluminator.Utilities.DevicePropertyName.*;
 import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.UpdateSource.UI;
 
 
 public class DisplayIlluminatorFrame extends JFrame {
     private DisplayIlluminatorController controller;
+    private Font labelFont;
 
-    // Tabs to indicate encapsulation. Could make separate classes if required
-    // Verify if each needs class-level scope
-      private JTabbedPane mainTabbedPane;
-        private JPanel sourcePatternPanel;
-            private SourcePatternControlPanel controlPanel;
-            private JPanel previewPanel;
-                private DisplayIlluminatorPreviewPane previewPane;
-
-    private void initializeMainTabbedPane() {
-        mainTabbedPane = new JTabbedPane();
+    private JTabbedPane createMainTabbedPane() {
+        JTabbedPane mainTabbedPane = new JTabbedPane();
         JPanel prefacePane  = new JPanel();
         JPanel acquisitionPane = new JPanel();
         JPanel qdpcPane = new JPanel();
-        initializeSourcePatternPanel();
-        mainTabbedPane.add("Source Pattern", sourcePatternPanel);
+        mainTabbedPane.add("Source Pattern", createSourcePatternPanel());
         mainTabbedPane.add("PreFace", prefacePane);
         mainTabbedPane.add("qDPC", qdpcPane);
         mainTabbedPane.add("Acquisition", acquisitionPane);
+
+        return mainTabbedPane;
     }
 
-    private void initializeSourcePatternPanel() {
-        sourcePatternPanel = new JPanel(new MigLayout("wrap 2, fill, insets 2, gap 2", "[grow 1][grow 2]"));
-//        controlPanel = new SourcePatternControlPanel(new MigLayout("wrap 1, fill, insets 2, gap 2", "[grow]"));
-        controlPanel = new SourcePatternControlPanel(controller, DisplayIlluminatorPreviewPane.ImageMode.DPC);
+    private JPanel createSourcePatternPanel() {
+        JPanel sourcePatternPanel = new JPanel(new MigLayout("wrap 2, fill, insets 2, gap 2", "[grow 1][grow 2]"));
+        SourcePatternControlPanel controlPanel = new SourcePatternControlPanel(controller,
+                new Utilities.ImageMode[]{
+                        Utilities.ImageMode.BF,
+                        Utilities.ImageMode.DF,
+                        Utilities.ImageMode.DPC,
+                        Utilities.ImageMode.PC,
+                        Utilities.ImageMode.RB});
+        controlPanel.add(createColorControlPanel(), "grow");
+        controlPanel.add(createRotationControlPanel(), "grow");
         sourcePatternPanel.add(controlPanel, "grow");
-        initializePreviewPanel();
-        sourcePatternPanel.add(previewPanel, "grow");
+        sourcePatternPanel.add(createPreviewPanel(), "grow");
+        return sourcePatternPanel;
     }
 
-    private void initializePreviewPanel() {
-        previewPanel = new JPanel(new MigLayout("wrap 2, fill, gap 0", "[grow][]"));
-        previewPane = new DisplayIlluminatorPreviewPane(controller);
+    private JPanel createPreviewPanel() {
+        JPanel previewPanel = new JPanel(new MigLayout("wrap 2, fill, gap 0", "[grow][]"));
+        DisplayIlluminatorPreviewPane previewPane = new DisplayIlluminatorPreviewPane(controller);
 
+        JPanel xPosPanel = new JPanel(new MigLayout("wrap 1, fillx"));
         JLabel xPosLabel = new JLabel("xPos:");
-//        xPosLabel.setFont(labelFont);
+        xPosLabel.setFont(labelFont);
         LinkedSliderAndField xPosControls = new LinkedSliderAndField(controller, CENTER_X);
+        xPosControls.textField.setColumns(3);
+        JPanel xPosLabelAndFieldPanel = new JPanel(new MigLayout("wrap 2"));
+        xPosLabelAndFieldPanel.add(xPosLabel);
+        xPosLabelAndFieldPanel.add(xPosControls.textField);
+        xPosPanel.add(xPosControls.slider, "growx");
+        xPosPanel.add(xPosLabelAndFieldPanel, "align center");
 
+        JPanel yPosPanel = new JPanel(new MigLayout("wrap 2, fill, insets 10 10 0 10", "[][]"));
         JLabel yPosLabel = new JLabel("yPos:");
-//        yPosLabel.setFont(labelFont);
+        yPosLabel.setFont(labelFont);
         LinkedSliderAndField yPosControls = new LinkedSliderAndField(controller, CENTER_Y);
+        yPosControls.textField.setColumns(3);
+        JPanel yPosLabelAndFieldPanel = new JPanel(new MigLayout("wrap 1"));
+        yPosLabelAndFieldPanel.add(yPosLabel);
+        yPosLabelAndFieldPanel.add(yPosControls.textField);
         yPosControls.slider.setOrientation(JSlider.VERTICAL);
+        yPosControls.slider.setInverted(true);
+        yPosPanel.add(yPosControls.slider, "growy");
+        yPosPanel.add(yPosLabelAndFieldPanel);
 
         previewPanel.add(previewPane, "push, grow");
-        previewPanel.add(yPosControls.slider, "growy");
-        previewPanel.add(xPosControls.slider, "growx");
+        previewPanel.add(yPosPanel, "growy");
+        previewPanel.add(xPosPanel, "growx");
+
+        return previewPanel;
+    }
+
+    private JPanel createRotationControlPanel() {
+        JPanel rotationPanel = new JPanel(new MigLayout("wrap 3, fill", "[150][grow][]68"));
+        JLabel rotationLabel = new JLabel("Rotation:");
+        rotationLabel.setFont(labelFont);
+        LinkedSliderAndField rotationControls = new LinkedSliderAndField(controller, ROTATION);
+        rotationControls.textField.setColumns(3);
+        rotationPanel.add(rotationLabel, "align left");
+        rotationPanel.add(rotationControls.slider, "grow");
+        rotationPanel.add(rotationControls.textField, "");
+        return rotationPanel;
+    }
+    private JPanel createColorControlPanel() {
+        // Colour controls
+        JPanel colorPanel = new JPanel(new MigLayout("wrap 3, fill", "[150]10[grow][grow]50"));
+        JLabel colorLabel = new JLabel("Colour:");
+        colorLabel.setFont(labelFont);
+        Color initialColor = Color.decode("#" + controller.getProperty(COLOR));
+        ColorChooserButton colorChooser = new ColorChooserButton(initialColor);
+        JTextField colorField = new JTextField(6);
+        colorField.setHorizontalAlignment(SwingConstants.CENTER);
+        colorField.setText(Utilities.colorToHexString(initialColor));
+        colorChooser.addColorChangedListener(new ColorChangedListener() {
+            @Override
+            public void colorChanged(Color newColor) {
+                controller.setProperty(COLOR, newColor, UI);
+                colorField.setText(Utilities.colorToHexString(newColor));
+            }
+        });
+        colorField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String newColorHex = colorField.getText();
+                colorChooser.setSelectedColor(Color.decode("#" + newColorHex));
+                controller.setProperty(COLOR, newColorHex, UI);
+            }
+        });
+
+        colorPanel.add(colorLabel, "align left");
+        colorPanel.add(colorChooser, "growx");
+        colorPanel.add(colorField, "growx");
+
+        return colorPanel;
     }
 
     public DisplayIlluminatorFrame(DisplayIlluminatorController controller) {
         super("DisplayIlluminator Plugin GUI");
         this.controller = controller;
-        Font labelFont = new Font("Arial", Font.BOLD, 16);
+        labelFont = new Font("Arial", Font.BOLD, 16);
         super.setLayout(new MigLayout("fill, insets 2, gap 2, flowx"));
-        initializeMainTabbedPane();
-        super.add(mainTabbedPane, "grow, wrap");
+        JTabbedPane mainTabbedPane = createMainTabbedPane();
+        super.add(mainTabbedPane, "grow, push, wrap");
 
 
 //        dpcControlPanel = new DpcControlPanel(controller);
@@ -141,37 +193,6 @@ public class DisplayIlluminatorFrame extends JFrame {
 //        rotationPanel.add(rotationControl, "span 2, growx");
 //        controlPanel.add(rotationPanel, "growx");
 
-        // Colour controls
-        JPanel colorPanel = new JPanel(new MigLayout("wrap 3, fill", "[150]10[grow][grow]50"));
-        JLabel colorLabel = new JLabel("Colour:");
-        colorLabel.setFont(labelFont);
-        Color initialColor = Color.decode("#" + controller.getProperty(COLOR));
-        ColorChooserButton colorChooser = new ColorChooserButton(initialColor);
-        JTextField colorField = new JTextField(6);
-        colorField.setHorizontalAlignment(SwingConstants.CENTER);
-        colorField.setText(Utilities.colorToHexString(initialColor));
-        colorChooser.addColorChangedListener(new ColorChangedListener() {
-            @Override
-            public void colorChanged(Color newColor) {
-                controller.setProperty(COLOR, newColor, UI);
-                colorField.setText(Utilities.colorToHexString(newColor));
-            }
-        });
-        colorField.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String newColorHex = colorField.getText();
-                colorChooser.setSelectedColor(Color.decode("#" + newColorHex));
-                controller.setProperty(COLOR, newColorHex, UI);
-            }
-        });
-
-        colorPanel.add(colorLabel, "align left");
-        colorPanel.add(colorChooser, "growx");
-        colorPanel.add(colorField, "growx");
-        controlPanel.add(colorPanel, "growx");
-
-
         // Snap an image, show the image in the Snap/Live view
         JButton snapButton = new JButton("Snap Image");
         snapButton.addActionListener(new ActionListener() {
@@ -209,24 +230,5 @@ public class DisplayIlluminatorFrame extends JFrame {
         WindowPositioning.setUpLocationMemory(this, this.getClass(), null);
         super.setMinimumSize(new Dimension(1000, 600));
         super.pack();
-
-
-//        // TODO: Remove temporary test code:
-//        try {
-//            core_.defineConfigGroup("IlluminationModes");
-//            core_.defineConfig("IlluminationModes","Off", "DisplayIlluminator", "ActiveImage", "Off");
-//            core_.defineConfig("IlluminationModes","DPC1", "DisplayIlluminator", "ActiveImage", "DPC1");
-//            core_.defineConfig("IlluminationModes","DPC2", "DisplayIlluminator", "ActiveImage", "DPC2");
-//            core_.defineConfig("IlluminationModes","DPC3", "DisplayIlluminator", "ActiveImage", "DPC3");
-//            core_.defineConfig("IlluminationModes","DPC4", "DisplayIlluminator", "ActiveImage", "DPC4");
-//            core_.defineConfig("IlluminationModes","BF", "DisplayIlluminator", "ActiveImage", "BF");
-//            core_.defineConfig("IlluminationModes","PC", "DisplayIlluminator", "ActiveImage", "PC");
-//            core_.setConfig("IlluminationModes", "Off");
-//            core_.waitForConfig("IlluminationModes", "Off");
-////            core_.updateSystemStateCache();
-//            studio_.app().refreshGUI();
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
     }
 }

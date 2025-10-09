@@ -1,15 +1,13 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName;
-import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName.*;
+import org.micromanager.plugins.DisplayIlluminator.Utilities.DevicePropertyName;
+import static org.micromanager.plugins.DisplayIlluminator.Utilities.DevicePropertyName.*;
 import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.UpdateSource.UI;
 
 public class DisplayIlluminatorPreviewPane extends JTabbedPane {
@@ -17,25 +15,6 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
     private final Map<DevicePropertyName, Consumer<String>> setMethodMap;
     private boolean callbackActive = false;
     private DisplayIlluminatorController controller;
-
-    public enum ImageMode { // TODO: Potentially relocate to controller
-        DPC("DPC"),
-        BF("BF"),
-        DF("DF"),
-        PC("PC"),
-        RB("RB");
-
-        private final String modeName;
-
-        ImageMode(String modeName) {
-            this.modeName = modeName;
-        }
-
-        @Override
-        public String toString() {
-            return modeName;
-        }
-    }
 
     DisplayIlluminatorPreviewPane(DisplayIlluminatorController controller) {
         previewImages_= new HashMap<String, EllipticalShapeImage>();
@@ -59,21 +38,22 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         setMethodMap.put(CENTER_Y, s -> this.setCenterY(Integer.parseInt(s)));
         setMethodMap.put(ROTATION, s -> this.setRotation(Float.parseFloat(s)));
         setMethodMap.put(COLOR, s -> this.setOuterColor(Color.decode("#" + s)));
-        setMethodMap.put(BF_HEIGHT, s -> this.setOuterHeight(ImageMode.BF, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(BF_WIDTH, s -> this.setOuterWidth(ImageMode.BF, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(DF_HEIGHT, s -> this.setOuterHeight(ImageMode.DF, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(DF_WIDTH, s -> this.setOuterWidth(ImageMode.DF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(BF_HEIGHT, s -> this.setOuterHeight(Utilities.ImageMode.BF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(BF_WIDTH, s -> this.setOuterWidth(Utilities.ImageMode.BF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DF_HEIGHT, s -> this.setOuterHeight(Utilities.ImageMode.DF, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DF_WIDTH, s -> this.setOuterWidth(Utilities.ImageMode.DF, Integer.parseUnsignedInt(s)));
         setMethodMap.put(DPC_COUNT, s -> this.setDpcCount(Integer.parseUnsignedInt(s))); // TODO: Currently unimplemented
-        setMethodMap.put(DPC_HEIGHT, s -> this.setOuterHeight(ImageMode.DPC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(DPC_WIDTH, s -> this.setOuterWidth(ImageMode.DPC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(DPC_INNER_HEIGHT, s -> this.setInnerHeight(ImageMode.DPC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(DPC_INNER_WIDTH, s -> this.setInnerWidth(ImageMode.DPC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(PC_HEIGHT, s -> this.setOuterHeight(ImageMode.PC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(PC_WIDTH, s -> this.setOuterWidth(ImageMode.PC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(PC_INNER_HEIGHT, s -> this.setInnerHeight(ImageMode.PC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(PC_INNER_WIDTH, s -> this.setInnerWidth(ImageMode.PC, Integer.parseUnsignedInt(s)));
-        setMethodMap.put(RB_INNER_COLOR, s -> this.setInnerColor(ImageMode.RB, Color.decode("#" + s)));
-        setMethodMap.put(RB_OUTER_COLOR, s -> this.setOuterColor(ImageMode.RB, Color.decode("#" + s)));
+        setMethodMap.put(DPC_HEIGHT, s -> this.setOuterHeight(Utilities.ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DPC_WIDTH, s -> this.setOuterWidth(Utilities.ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DPC_INNER_HEIGHT, s -> this.setInnerHeight(Utilities.ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(DPC_INNER_WIDTH, s -> this.setInnerWidth(Utilities.ImageMode.DPC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_HEIGHT, s -> this.setOuterHeight(Utilities.ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_WIDTH, s -> this.setOuterWidth(Utilities.ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_INNER_HEIGHT, s -> this.setInnerHeight(Utilities.ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(PC_INNER_WIDTH, s -> this.setInnerWidth(Utilities.ImageMode.PC, Integer.parseUnsignedInt(s)));
+        setMethodMap.put(RB_INNER_COLOR, s -> this.setInnerColor(Utilities.ImageMode.RB, Color.decode("#" + s)));
+        setMethodMap.put(RB_OUTER_COLOR, s -> this.setOuterColor(Utilities.ImageMode.RB, Color.decode("#" + s)));
+//        setMethodMap.put(ACTIVE_IMAGE, this::setActiveImage);
 
 
         // Setup Change listeners
@@ -135,7 +115,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
 
     private void addDfPanel() {
         addAnnulusPanel(
-                ImageMode.DF,
+                Utilities.ImageMode.DF,
                 Integer.parseInt(controller.getProperty(DISPLAY_WIDTH)),
                 Integer.parseInt(controller.getProperty(DISPLAY_HEIGHT)),
                 Float.parseFloat(controller.getProperty(DF_WIDTH)),
@@ -149,7 +129,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
 
     private void addPcPanel() {
         addAnnulusPanel(
-                ImageMode.PC,
+                Utilities.ImageMode.PC,
                 Integer.parseInt(controller.getProperty(DISPLAY_WIDTH)),
                 Integer.parseInt(controller.getProperty(DISPLAY_HEIGHT)),
                 Float.parseFloat(controller.getProperty(PC_WIDTH)),
@@ -166,7 +146,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
                               float dpcRotation, Color color) {
         for(int i = 0; i < dpcCount; i++)
         {
-            String dpcKey = ImageMode.DPC.toString() + (i + 1);
+            String dpcKey = Utilities.ImageMode.DPC.toString() + (i + 1);
             EllipticalShapeImage ellipticalShapeImage = new EllipticalShapeImage(
                     displayWidthPx, displayHeightPx, dpcWidth, dpcHeight, dpcInnerWidth, dpcInnerHeight,
                     dpcRotation,   (i + 1) * 360.0f / dpcCount, color);
@@ -178,7 +158,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         }
     }
 
-    private void addAnnulusPanel(ImageMode name,
+    private void addAnnulusPanel(Utilities.ImageMode name,
                                  int displayWidthPx, int displayHeightPx,
                                  float outerWidth, float outerHeight,
                                  float innerWidth, float innerHeight,
@@ -196,7 +176,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
 
     private void addBfPanel(int displayWidthPx, int displayHeightPx,
                            float ovalWidth, float ovalHeight, float ovalRotation, Color color) {
-        String bfKey = ImageMode.BF.toString();
+        String bfKey = Utilities.ImageMode.BF.toString();
         EllipticalShapeImage bfImage = new EllipticalShapeImage(displayWidthPx, displayHeightPx, ovalWidth, ovalHeight, ovalRotation, color);
         previewImages_.put(bfKey, bfImage);
         JPanel bfImagePanel = new ResizableImagePanel(bfImage.getBufferedImage());
@@ -213,7 +193,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         }
     }
 
-    private void forEachImageOfMode(ImageMode imageMode, Consumer<EllipticalShapeImage> method) {
+    private void forEachImageOfMode(Utilities.ImageMode imageMode, Consumer<EllipticalShapeImage> method) {
         this.previewImages_.entrySet()
                 .stream()
                 .filter(e -> e.getKey().startsWith(imageMode.toString()))
@@ -247,7 +227,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.repaint();
     }
 
-    private void setInnerHeight(ImageMode imageMode, int height) {
+    private void setInnerHeight(Utilities.ImageMode imageMode, int height) {
         forEachImageOfMode(imageMode, m -> m.setEllipseInnerHeight(height));
         this.repaint();
     }
@@ -257,7 +237,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.repaint();
     }
 
-    private void setInnerWidth(ImageMode imageMode, int width) {
+    private void setInnerWidth(Utilities.ImageMode imageMode, int width) {
         forEachImageOfMode(imageMode, m -> m.setEllipseInnerWidth(width));
         this.repaint();
     }
@@ -267,7 +247,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.repaint();
     }
 
-    private void setOuterHeight(ImageMode imageMode, int height) {
+    private void setOuterHeight(Utilities.ImageMode imageMode, int height) {
         forEachImageOfMode(imageMode, m -> m.setEllipseOuterHeight(height));
         this.repaint();
     }
@@ -277,7 +257,7 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.repaint();
     }
 
-    private void setOuterWidth(ImageMode imageMode, int width) {
+    private void setOuterWidth(Utilities.ImageMode imageMode, int width) {
         forEachImageOfMode(imageMode, m -> m.setEllipseOuterWidth(width));
         this.repaint();
     }
@@ -292,12 +272,12 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.repaint();
     }
 
-    private void setDiameter(ImageMode imageMode, int diameterInPixels) {
+    private void setDiameter(Utilities.ImageMode imageMode, int diameterInPixels) {
         forEachImageOfMode(imageMode, m -> m.setDiameter(diameterInPixels));
         this.repaint();
     }
 
-    private void setInnerDiameter(ImageMode imageMode, int diameterInPixels) {
+    private void setInnerDiameter(Utilities.ImageMode imageMode, int diameterInPixels) {
         forEachImageOfMode(imageMode, m -> m.setInnerDiameter(diameterInPixels));
         this.repaint();
     }
@@ -312,12 +292,12 @@ public class DisplayIlluminatorPreviewPane extends JTabbedPane {
         this.repaint();
     }
 
-    private void setOuterColor(ImageMode imageMode, Color color) {
+    private void setOuterColor(Utilities.ImageMode imageMode, Color color) {
         forEachImageOfMode(imageMode, m -> m.setOuterColor(color));
         this.repaint();
     }
 
-    private void setInnerColor(ImageMode imageMode, Color color) {
+    private void setInnerColor(Utilities.ImageMode imageMode, Color color) {
         forEachImageOfMode(imageMode, m -> m.setInnerColor(color));
         this.repaint();
     }

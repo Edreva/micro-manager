@@ -9,9 +9,8 @@ import java.awt.*;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.HashMap;
-import java.util.Objects;
 
-import static org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName.*;
+import static org.micromanager.plugins.DisplayIlluminator.Utilities.DevicePropertyName.*;
 
 // TODO: Perhaps rename this and so-called 'interface' class to more clearly reflect their purposes.
 public class DisplayIlluminatorController {
@@ -23,9 +22,9 @@ public class DisplayIlluminatorController {
     public enum UpdateSource {UI, MM_CORE, INTERNAL};
     private final boolean liveUpdateCore = false; // If set, the HW device will be updated in sync with UI changes, if not only on release.
     private boolean updateOngoing = false;
-    private HashMap<String, HashMap<DevicePropertyName, String>> savedPropertyStates;
-    private HashMap<DevicePropertyName, Double> propertiesLowerLimitsOverrides;
-    private HashMap<DevicePropertyName, Double> propertiesUpperLimitsOverrides;
+    private HashMap<String, HashMap<Utilities.DevicePropertyName, String>> savedPropertyStates;
+    private HashMap<Utilities.DevicePropertyName, Double> propertiesLowerLimitsOverrides;
+    private HashMap<Utilities.DevicePropertyName, Double> propertiesUpperLimitsOverrides;
     private final DisplayIlluminatorFrame ui;
     private final PropertyChangeSupport pcs;
 
@@ -35,24 +34,15 @@ public class DisplayIlluminatorController {
         deviceLabel = mmCore.getSLMDevice();
         deviceName = "DisplayIlluminator"; //mmCore.getDeviceName(deviceLabel);
         savedPropertyStates = new HashMap<>();
-        propertiesLowerLimitsOverrides = new HashMap<DevicePropertyName, Double>();
-        propertiesLowerLimitsOverrides.put(CENTER_X, 0.0);
-        propertiesLowerLimitsOverrides.put(CENTER_Y, 0.0);
-        propertiesUpperLimitsOverrides = new HashMap<DevicePropertyName, Double>();
-        propertiesUpperLimitsOverrides.put(CENTER_X, 1000.0);
-        propertiesUpperLimitsOverrides.put(CENTER_Y, 1000.0);
 
-        propertiesLowerLimitsOverrides.put(DPC_HEIGHT, 0.0);
-        propertiesLowerLimitsOverrides.put(DPC_WIDTH, 0.0);
-
-        propertiesUpperLimitsOverrides.put(DPC_HEIGHT, 1000.0);
-        propertiesUpperLimitsOverrides.put(DPC_WIDTH, 1000.0);
-
+        initializeLimitOverrides();
 
         pcs = new PropertyChangeSupport(this);
         ui = new DisplayIlluminatorFrame(this);
 
         ui.setVisible(true);
+
+        createConfigGroup();
 
         // Registering this class for events means that its event handlers
         // (that is, methods with the @Subscribe annotation) will be invoked when
@@ -64,13 +54,57 @@ public class DisplayIlluminatorController {
         studio.events().registerForEvents(this);
     }
 
-    public void addPropertyChangeListener(DevicePropertyName propertyName, PropertyChangeListener listener) {
+    private void initializeLimitOverrides() {
+        Double displayWidth = Double.parseDouble(getProperty(DISPLAY_WIDTH));
+        Double displayHeight = Double.parseDouble(getProperty(DISPLAY_HEIGHT));
+        propertiesLowerLimitsOverrides = new HashMap<Utilities.DevicePropertyName, Double>();
+        propertiesUpperLimitsOverrides = new HashMap<Utilities.DevicePropertyName, Double>();
+        propertiesLowerLimitsOverrides.put(CENTER_X, -displayWidth);
+        propertiesLowerLimitsOverrides.put(CENTER_Y, -displayHeight);
+        propertiesUpperLimitsOverrides.put(CENTER_X, displayWidth);
+        propertiesUpperLimitsOverrides.put(CENTER_Y, displayHeight);
+        propertiesLowerLimitsOverrides.put(ROTATION, 0.0);
+        propertiesUpperLimitsOverrides.put(ROTATION, 360.0);
+        propertiesLowerLimitsOverrides.put(DPC_COUNT, 0.0);
+        propertiesUpperLimitsOverrides.put(DPC_COUNT, 12.0);
+        propertiesLowerLimitsOverrides.put(DPC_HEIGHT, 0.0);
+        propertiesLowerLimitsOverrides.put(DPC_WIDTH, 0.0);
+        propertiesUpperLimitsOverrides.put(DPC_HEIGHT, displayHeight);
+        propertiesUpperLimitsOverrides.put(DPC_WIDTH, displayWidth);
+        propertiesLowerLimitsOverrides.put(DPC_INNER_HEIGHT, 0.0);
+        propertiesLowerLimitsOverrides.put(DPC_INNER_WIDTH, 0.0);
+        propertiesUpperLimitsOverrides.put(DPC_INNER_HEIGHT, displayHeight);
+        propertiesUpperLimitsOverrides.put(DPC_INNER_WIDTH, displayWidth);
+        propertiesLowerLimitsOverrides.put(PC_HEIGHT, 0.0);
+        propertiesLowerLimitsOverrides.put(PC_WIDTH, 0.0);
+        propertiesUpperLimitsOverrides.put(PC_HEIGHT, displayHeight);
+        propertiesUpperLimitsOverrides.put(PC_WIDTH, displayWidth);
+        propertiesLowerLimitsOverrides.put(PC_INNER_HEIGHT, 0.0);
+        propertiesLowerLimitsOverrides.put(PC_INNER_WIDTH, 0.0);
+        propertiesUpperLimitsOverrides.put(PC_INNER_HEIGHT, displayHeight);
+        propertiesUpperLimitsOverrides.put(PC_INNER_WIDTH, displayWidth);
+        propertiesLowerLimitsOverrides.put(DF_HEIGHT, 0.0);
+        propertiesLowerLimitsOverrides.put(DF_WIDTH, 0.0);
+        propertiesUpperLimitsOverrides.put(DF_HEIGHT, displayHeight);
+        propertiesUpperLimitsOverrides.put(DF_WIDTH, displayWidth);
+        propertiesLowerLimitsOverrides.put(DF_INNER_HEIGHT, 0.0);
+        propertiesLowerLimitsOverrides.put(DF_INNER_WIDTH, 0.0);
+        propertiesUpperLimitsOverrides.put(DF_INNER_HEIGHT, displayHeight);
+        propertiesUpperLimitsOverrides.put(DF_INNER_WIDTH, displayWidth);
+        propertiesLowerLimitsOverrides.put(BF_HEIGHT, 0.0);
+        propertiesLowerLimitsOverrides.put(BF_WIDTH, 0.0);
+        propertiesUpperLimitsOverrides.put(BF_HEIGHT, displayHeight);
+        propertiesUpperLimitsOverrides.put(BF_WIDTH, displayWidth);
+    }
+
+    public void addPropertyChangeListener(Utilities.DevicePropertyName propertyName, PropertyChangeListener listener) {
         pcs.addPropertyChangeListener(propertyName.toString(), listener);
     }
 
-    public void removePropertyChangeListener(DevicePropertyName propertyName, PropertyChangeListener listener) {
+    public void removePropertyChangeListener(Utilities.DevicePropertyName propertyName, PropertyChangeListener listener) {
         pcs.removePropertyChangeListener(propertyName.toString(), listener);
     }
+
     /**
      * To be invoked, this method must be public and take a single parameter
      * which is the type of the event we care about.
@@ -97,31 +131,36 @@ public class DisplayIlluminatorController {
         setUpdateOngoing(updateOngoing);
         try {
             String oldValue = mmCore.getProperty(deviceLabel, propertyName);
+            if (source == UpdateSource.MM_CORE) {
+                oldValue = null;  // pcs won't fire property change if old value is same as new. Could avoid this by storing old values in this class.
+            }
 
             if (source == UpdateSource.UI && (!updateOngoing || liveUpdateCore)) {
                 mmCore.setProperty(deviceLabel, propertyName, value);
+                studio.app().refreshGUI();
             }
             if (source != UpdateSource.INTERNAL) {
                 pcs.firePropertyChange(propertyName, oldValue, value);
+                ui.repaint();
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void setProperty(DevicePropertyName propertyName, String value, UpdateSource source, boolean updateOngoing) {
+    public void setProperty(Utilities.DevicePropertyName propertyName, String value, UpdateSource source, boolean updateOngoing) {
         setProperty(propertyName.toString(), value, source, updateOngoing);
     }
 
-    public void setProperty(DevicePropertyName propertyName, String value, UpdateSource source) {
+    public void setProperty(Utilities.DevicePropertyName propertyName, String value, UpdateSource source) {
         setProperty(propertyName.toString(), value, source, false);
     }
 
-    public void setProperty(DevicePropertyName propertyName, Color color, UpdateSource source) {
+    public void setProperty(Utilities.DevicePropertyName propertyName, Color color, UpdateSource source) {
         setProperty(propertyName.toString(), Utilities.colorToHexString(color), source, false);
     }
 
-    public String getProperty(DevicePropertyName propertyName) {
+    public String getProperty(Utilities.DevicePropertyName propertyName) {
         return getProperty(propertyName.toString());
     }
 
@@ -133,7 +172,7 @@ public class DisplayIlluminatorController {
         }
     }
 
-    public double getPropertyLowerLimit(DevicePropertyName propertyName) {
+    public double getPropertyLowerLimit(Utilities.DevicePropertyName propertyName) {
         try {
             return propertiesLowerLimitsOverrides.getOrDefault(propertyName,
                     mmCore.getPropertyLowerLimit(deviceLabel, propertyName.toString())
@@ -143,7 +182,7 @@ public class DisplayIlluminatorController {
         }
     }
 
-    public double getPropertyUpperLimit(DevicePropertyName propertyName) {
+    public double getPropertyUpperLimit(Utilities.DevicePropertyName propertyName) {
         try {
             return propertiesUpperLimitsOverrides.getOrDefault(propertyName,
                     mmCore.getPropertyUpperLimit(deviceLabel, propertyName.toString())
@@ -158,7 +197,7 @@ public class DisplayIlluminatorController {
         try {
             savedPropertyStates.put(stateName, new HashMap<>());
 //            for (String propertyName: mmCore.getDevicePropertyNames(deviceName)) {
-            for (DevicePropertyName propertyName: DevicePropertyName.values()) {
+            for (Utilities.DevicePropertyName propertyName: Utilities.DevicePropertyName.values()) {
                 savedPropertyStates.get(stateName)
                         .put(propertyName, mmCore.getProperty(deviceName, propertyName.toString()));
             }
@@ -170,7 +209,7 @@ public class DisplayIlluminatorController {
     public void restorePropertyState(String stateName) {
         try {
 //            for (String propertyName: mmCore.getDevicePropertyNames(deviceName)) {
-            for (DevicePropertyName propertyName: DevicePropertyName.values()) {
+            for (Utilities.DevicePropertyName propertyName: Utilities.DevicePropertyName.values()) {
                 mmCore.setProperty(deviceName, propertyName.toString(),
                         savedPropertyStates.get(stateName).get(propertyName));
             }
@@ -179,45 +218,19 @@ public class DisplayIlluminatorController {
         }
     }
 
-    public enum DevicePropertyName {
-        DISPLAY_HEIGHT("DisplayHeight_pixels"),
-        DISPLAY_WIDTH("DisplayWidth_pixels"),
-        CENTER_X("CenterX"),
-        CENTER_Y("CenterY"),
-        ROTATION("Rotation"),
-        COLOR("MonoColor"),
-        ACTIVE_IMAGE("ActiveImage"),
-        BF_HEIGHT("BfHeight"),
-        BF_WIDTH("BfWidth"),
-        DF_HEIGHT("DfHeight"),
-        DF_WIDTH("DfWidth"),
-        DF_INNER_HEIGHT("DfInnerHeight"),
-        DF_INNER_WIDTH("DfInnerWidth"),
-        DPC_COUNT("DpcPatternCount"),
-        DPC_HEIGHT("DpcHeight"),
-        DPC_WIDTH("DpcWidth"),
-        DPC_INNER_HEIGHT("DpcInnerHeight"),
-        DPC_INNER_WIDTH("DpcInnerWidth"),
-        PC_HEIGHT("PcHeight"),
-        PC_WIDTH("PcWidth"),
-        PC_INNER_HEIGHT("PcInnerHeight"),
-        PC_INNER_WIDTH("PcInnerWidth"),
-        RB_OUTER_COLOR("RbOuterColor"),
-        RB_INNER_COLOR("RbInnerColor");
-
-        private final String propertyName;
-
-        DevicePropertyName(String propertyName) {
-            this.propertyName = propertyName;
-        }
-
-        public String getName() {
-            return propertyName;
-        }
-
-        @Override
-        public String toString() {
-            return propertyName;
+    public void createConfigGroup() {
+        try {
+            String groupName = "IlluminationModes";
+            mmCore.defineConfigGroup(groupName);
+            for (String imageName: mmCore.getAllowedPropertyValues(deviceLabel, ACTIVE_IMAGE.toString())) {
+                mmCore.defineConfig(groupName, imageName, deviceLabel, ACTIVE_IMAGE.toString(), imageName);
+            }
+            mmCore.setConfig(groupName, "Off");
+            mmCore.waitForConfig(groupName, "Off");
+            studio.app().refreshGUI();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
+
 }

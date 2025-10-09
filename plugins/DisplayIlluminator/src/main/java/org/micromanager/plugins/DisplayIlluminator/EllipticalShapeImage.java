@@ -212,8 +212,8 @@ public class EllipticalShapeImage {
         graphics.setColor(bkgColor_);
         graphics.fillRect(0, 0, frameWidth_, frameHeight_);
         graphics.setColor(outerColor_);
-        double xShift = frameWidth_/2.0 + xPos_;
-        double yShift = frameHeight_/2.0 +yPos_;
+        double xShift = xPos_ + frameWidth_ / 2.0;
+        double yShift = yPos_ + frameHeight_ / 2.0;
         graphics.translate(xShift, yShift);
         graphics.rotate(Math.toRadians(ellipseRotation_));
 //        graphics.draw(outerArc_);

@@ -1,16 +1,12 @@
 package org.micromanager.plugins.DisplayIlluminator;
 
-import net.miginfocom.swing.MigLayout;
-import org.apache.commons.lang3.ArrayUtils;
-
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
-import org.micromanager.plugins.DisplayIlluminator.DisplayIlluminatorController.DevicePropertyName;
+import org.micromanager.plugins.DisplayIlluminator.Utilities.DevicePropertyName;
 
 public class LinkedSliderAndField {
     // Keeping public for ease.
@@ -30,7 +26,8 @@ public class LinkedSliderAndField {
                 (int) controller.getPropertyLowerLimit(propertyName),
                 (int) controller.getPropertyUpperLimit(propertyName),
                 Integer.parseInt(controller.getProperty(propertyName)));
-        textField = new JTextField();
+
+        textField = new JTextField(controller.getProperty(propertyName));
         propertyToUpdate = propertyName;
         propertyToListenFor = propertyToUpdate;
         this.controller = controller;
@@ -110,6 +107,26 @@ public class LinkedSliderAndField {
 
     public DevicePropertyName getPropertyToUpdate() {
         return propertyToUpdate;
+    }
+
+    public void setLowerLimit(int value) {
+        this.slider.setMinimum(value);
+    }
+
+    public void setUpperLimit(int value) {
+        this.slider.setMaximum(value);
+    }
+
+    public void setLimits(int lowerValue, int upperValue) {
+        setLowerLimit(lowerValue);
+        setUpperLimit(upperValue);
+    }
+
+    public void resetSliderLimits() {
+        setLimits(
+                (int) controller.getPropertyLowerLimit(propertyToUpdate),
+                (int) controller.getPropertyUpperLimit(propertyToUpdate)
+        );
     }
 
 }
